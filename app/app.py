@@ -16,6 +16,8 @@ import plotly_express as px
 
 from shapely.geometry import Point
 
+server=app.server
+
 EPSG_26919 = "EPSG:26919"
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -49,8 +51,6 @@ def get_fig(ori_str, des_str):
     pts = list(map(lambda x : x.coords[0], pts))
     pts_df = pd.DataFrame(pts).rename({0:'lat',1:'lng'},axis=1)
     return px.line_mapbox(pts_df, lat='lat', lon='lng', center={'lat':42.3, 'lon':-71.1}, mapbox_style="open-street-map")
-
-
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
