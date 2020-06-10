@@ -16,7 +16,6 @@ import plotly.graph_objects as go
 import plotly_express as px
 
 
-
 EPSG_26919 = "EPSG:26919"
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -52,6 +51,7 @@ def get_fig(ori_str, des_str):
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
+server = app.server
 styles = {
     'pre': {
         'border': 'thin lightgrey solid',
