@@ -32,6 +32,7 @@ with open("brighton_graph.pkl", 'rb') as pklfile:
 node_pd = pd.DataFrame(ox.graph_to_gdfs(brighton_G, edges=False, nodes=True).drop(columns=[0,'osmid']))
 
 import geocoder
+print('import geocoder')
 def get_route(ori_str, des_str):
     g1 = geocoder.osm(ori_str + " Brighton, MA")
     g2 = geocoder.osm(des_str + " Brighton, MA")
@@ -111,6 +112,9 @@ def update_figure(nb, ori_str, dest_str):
     else:
         return get_fig(ori_str, dest_str)    
 
+print(__name__)
+
 if __name__ == '__main__':
+    print("let's go")
     app.run_server(debug=True,
             port = 8050)
