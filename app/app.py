@@ -1,8 +1,6 @@
 import json
 import pickle as pkl
 
-import pandas as pd
-import geopandas as gpd
 import osmnx as ox
 import networkx as nx
 
@@ -23,8 +21,7 @@ external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 with open("brighton_graph.pkl", 'rb') as pklfile:
     brighton_G = pkl.load(pklfile)
 
-node_pd = pd.DataFrame(ox.graph_to_gdfs(brighton_G, edges=False, nodes=True).drop(columns=[0,'osmid']))
-edges = brighton_G.edges(data=True)
+# edges = brighton_G.edges(data=True)
 
 Safe = px.colors.qualitative.Safe
 angle_color_map = {
@@ -34,19 +31,19 @@ angle_color_map = {
         3: Safe[1],
         4: Safe[9],
         None: 'blue'}
-angle_data = {(u,v):angle for (u,v,angle) in brighton_G.edges.data('angle_class')}
-angle_edge_map = {}
-for edge in angle_data:
-    if angle_data[edge] in angle_edge_map:
-        angle_edge_map[angle_data[edge]].append(edge)
-    else:
-        angle_edge_map[angle_data[edge]] = [edge]
+# angle_data = {(u,v):angle for (u,v,angle) in brighton_G.edges.data('angle_class')}
+# angle_edge_map = {}
+# for edge in angle_data:
+#     if angle_data[edge] in angle_edge_map:
+#         angle_edge_map[angle_data[edge]].append(edge)
+#     else:
+#         angle_edge_map[angle_data[edge]] = [edge]
 
-for num in range(5):
-    if num not in angle_edge_map:
-        angle_edge_map[num] = []
+# for num in range(5):
+#     if num not in angle_edge_map:
+#         angle_edge_map[num] = []
 
-COLORS = [Safe[3], Safe[6], Safe[2], Safe[1], Safe[9]]
+# COLORS = [Safe[3], Safe[6], Safe[2], Safe[1], Safe[9]]
 
 import geocoder
 def get_route(ori_str, des_str):
