@@ -41,7 +41,7 @@ app.layout = html.Div([
             style={'width': '400px'})]),
     html.Div(id='warning'),
     html.Div(id='a_string', children=""),
-    html.Div([dl.Map([dl.TileLayer(), dl.LayerGroup(id='layer')], style={'width': '1000px', 'height': '500px'}, id="the_map")]),
+    # html.Div([dl.Map([dl.TileLayer(), dl.LayerGroup(id='layer')], style={'width': '1000px', 'height': '500px'}, id="the_map")]),
     html.Div(id='blurs', style={'display': 'none'}),
     html.Div(id='dd-output-container', style={'display': 'none'})])
 
@@ -71,15 +71,15 @@ def update_blurs(blur_o, blur_d,routing):
 def update_dd(value):
     return value
 
-@app.callback(
-    [ Output('warning', 'children'),
-      Output('layer', 'children'),
-      Output('the_map','bounds')],
-    [Input('blurs', 'children')],# Input('dest', 'value')],
-    [State('origin', 'value'),
-     State('dest', 'value'),
-     State('routing', 'value')]
-    )
+# @app.callback(
+#     [ Output('warning', 'children'),
+#       Output('layer', 'children'),
+#       Output('the_map','bounds')],
+#     [Input('blurs', 'children')],# Input('dest', 'value')],
+#     [State('origin', 'value'),
+#      State('dest', 'value'),
+#      State('routing', 'value')]
+#     )
 def update_figure(nb, ori_str, dest_str, routing):
     if (not ori_str) or (not dest_str):
         return [], 'Enter your origin and destination!', utils.STANDARD_BOUNDS 
