@@ -50,7 +50,7 @@ app.layout = html.Div([
                 {'label': "Find me a route which isn't too long or steep", 'value': 'balance'},
                 {'label': 'Just show me the shortest route', 'value': 'short'}],
             value='ADA',
-            style={'width': '400px'})],
+            style={'width': '400px'})]),
     html.Div(id='warning'),
     html.Div(id='a_string', children=""),
     html.Div([dl.Map([dl.TileLayer(), dl.LayerGroup(id='layer')], style={'width': '1000px', 'height': '500px'}, id="the_map")]),
