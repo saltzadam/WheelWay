@@ -1,22 +1,10 @@
-import json
-import pickle as pkl
-
-import osmnx as ox
-import networkx as nx
-
-
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output, State
-import plotly.graph_objects as go
-import plotly_express as px
 
 import dash_leaflet as dl
 
-import folium
-import osmnx as ox
-import math
 
 import app.utils as utils
 
