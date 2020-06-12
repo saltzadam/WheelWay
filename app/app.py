@@ -18,7 +18,7 @@ import folium
 import osmnx as ox
 import math
 
-import utils
+import app.utils as utils
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -42,21 +42,18 @@ app.layout = html.Div([
     dcc.Markdown("Origin:"),
     dcc.Input(id='origin', value='', type='text', debounce=True),
     dcc.Markdown("Destination:"),
-    html.Div(id='container', children = [
-        html.Div(id='input-div', children = [dcc.Input(id='dest', value='', type='text', debounce=True)], style={'width': '200px'}),
-        html.Div(id='drop-div', children = 
-            [dcc.Dropdown(id='routing',
-                options = [
-                    {'label': 'Find me an ADA accessible route.', 'value': 'ADA'},
-                    {'label': 'Find me a route without very steep slopes', 'value': 'slope'},
-                    {'label': "Find me a route which isn't too long or steep", 'value': 'balance'},
-                    {'label': 'Just show me the shortest route', 'value': 'short'}],
-                value='ADA',
-                style={'width': '400px'})])
-            ], style={'columns': '2'}),
+    html.Div(id='container', children = [dcc.Input(id='dest', value='', type='text', debounce=True),
+        dcc.Dropdown(id='routing',
+            options = [
+                {'label': 'Find me an ADA accessible route.', 'value': 'ADA'},
+                {'label': 'Find me a route without very steep slopes', 'value': 'slope'},
+                {'label': "Find me a route which isn't too long or steep", 'value': 'balance'},
+                {'label': 'Just show me the shortest route', 'value': 'short'}],
+            value='ADA',
+            style={'width': '400px'})],
     html.Div(id='warning'),
     html.Div(id='a_string', children=""),
-    html.Div([dl.Map([dl.TileLayer(), dl.LayerGroup(id='layer')], style={'float':'left', 'width': '1000px', 'height': '500px'}, id="the_map")]),
+    html.Div([dl.Map([dl.TileLayer(), dl.LayerGroup(id='layer')], style={'width': '1000px', 'height': '500px'}, id="the_map")]),
     html.Div(id='blurs', style={'display': 'none'}),
     html.Div(id='dd-output-container', style={'display': 'none'})])
 
