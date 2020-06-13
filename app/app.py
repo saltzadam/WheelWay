@@ -6,7 +6,7 @@ from dash.dependencies import Input, Output, State
 import dash_leaflet as dl
 
 
-import app.utils as utils
+# import app.utils as utils
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -41,7 +41,7 @@ app.layout = html.Div([
             style={'width': '400px'})]),
     html.Div(id='warning'),
     html.Div(id='a_string', children=""),
-    # html.Div([dl.Map([dl.TileLayer(), dl.LayerGroup(id='layer')], style={'width': '1000px', 'height': '500px'}, id="the_map")]),
+    html.Div([dl.Map([dl.TileLayer(), dl.LayerGroup(id='layer')], style={'width': '1000px', 'height': '500px'}, id="the_map")]),
     html.Div(id='blurs', style={'display': 'none'}),
     html.Div(id='dd-output-container', style={'display': 'none'})])
 
@@ -80,11 +80,11 @@ def update_dd(value):
 #      State('dest', 'value'),
 #      State('routing', 'value')]
 #     )
-def update_figure(nb, ori_str, dest_str, routing):
-    if (not ori_str) or (not dest_str):
-        return [], 'Enter your origin and destination!', utils.STANDARD_BOUNDS 
-    else:
-        return utils.get_fig(ori_str, dest_str, routing)
+# def update_figure(nb, ori_str, dest_str, routing):
+#     if (not ori_str) or (not dest_str):
+#         return [], 'Enter your origin and destination!', utils.STANDARD_BOUNDS 
+#     else:
+#         return utils.get_fig(ori_str, dest_str, routing)
 
 if __name__ == '__main__':
     app.run_server(debug=True,
