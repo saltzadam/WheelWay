@@ -2,7 +2,7 @@ import geocoder
 import psycopg2
 import sqlalchemy as sql
 
-import shapely
+from  shapely.wkt import loads
 import dash_leaflet as dl
 import plotly_express as px
 
@@ -61,7 +61,7 @@ def get_nearest_node(lng, lat, cur):
 
 # converts 'POINT (coord, coord)' to (coord, coord)
 def pt_to_pair(ptstring):
-    pt = shapely.wkt.loads(ptstring)
+    pt = loads(ptstring) # from shapely
     return pt.coords[0]
 
 
