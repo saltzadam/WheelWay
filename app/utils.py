@@ -1,7 +1,4 @@
 import geocoder
-import pickle as pkl
-import networkx as nx
-import osmnx as ox
 import psycopg2
 import sqlalchemy as sql
 
@@ -9,7 +6,7 @@ import shapely
 import dash_leaflet as dl
 import plotly_express as px
 
-import math 
+import os
 
 # controls angle scaling for balanced paths
 ALPHA = 2/5
@@ -34,8 +31,9 @@ angle_dash_map = {
 
 hostname = "wheelway2.cgfv5tiyps6x.us-east-1.rds.amazonaws.com"
 username = "postgres"
-with open('/home/adam/rdskey') as keyfile:
-    rds_key = keyfile.readline().strip()
+#with open('rdskey') as keyfile:
+#    rds_key = keyfile.readline().strip()
+rds_key = os.environ['RDS_KEY']
  
 con = psycopg2.connect(database = "wheelway", 
                        user=username, 
