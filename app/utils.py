@@ -49,7 +49,7 @@ engine = sql.create_engine('postgresql+psycopg2://{user}:{pwd}@{host}:{port}/whe
                                                                                      ))
 
 
-def get_nearest_node(lng, lat):
+def get_nearest_node(lng, lat, cur):
     cur.execute("""
     SELECT source, geom <-> ST_SetSRID(ST_MakePoint(%s, %s), 4326) AS dist 
     FROM my_edges
@@ -148,10 +148,10 @@ def get_route(ori_str, des_str,routing):
     g2 = geocoder.osm(des_str + " Brighton, MA")
     p1 = (g1.json['lng'], g1.json['lat'])
     p2 = (g2.json['lng'], g2.json['lat'])
-    n1 = get_nearest_node(p1[0], p1[1])
-    n2 = get_nearest_node(p2[0], p2[1])
-    # this returns a list (lng, lat, class)
     cur = con.cursor()
+    n1 = get_nearest_node(p1[0], p1[1], cur)
+    n2 = get_nearest_node(p2[0], p2[1], cur)
+    # this returns a list (lng, lat, class)
     route_message = query_route(n1, n2, routing, cur)
     cur.close()
     # returns a list of tuples [(lng, lat)]
