@@ -1,18 +1,7 @@
-import json
-import pickle as pkl
-
-import pandas as pd
-import geopandas as gpd
-import osmnx as ox
-import networkx as nx
-
+import geocoder
+import psycopg2
+import sqlalchemy as sql
 import plotly_express as px
-
-with open("brighton_graph.pkl", 'rb') as pklfile:
-    brighton_G = pkl.load(pklfile)
-
-node_pd = pd.DataFrame(ox.graph_to_gdfs(brighton_G, edges=False, nodes=True).drop(columns=[0,'osmid']))
-edges = brighton_G.edges(data=True)
 
 Safe = px.colors.qualitative.Safe
 angle_color_map = {
@@ -25,8 +14,37 @@ angle_color_map = {
 angle_data = {(u,v):angle for (u,v,angle) in brighton_G.edges.data('angle_class')}
 
 COLORS = [Safe[3], Safe[6], Safe[2], Safe[1], Safe[9]]
-# print(brighton_G.edges.data('angle_class'))
-import geocoder
+
+hostname = "wheelway2.cgfv5tiyps6x.us-east-1.rds.amazonaws.com"
+username = "postgres"
+with open('/home/adam/rdskey') as keyfile:
+    rds_key = keyfile.readline().strip()
+    
+con = psycopg2.connect(database = "wheelway", 
+                       user=username, 
+                       host=hostname, 
+                       password=rds_key, 
+                       port=5432
+                      )
+
+engine = sql.create_engine('postgresql+psycopg2://{user}:{pwd}@{host}:{port}/wheelway'.format(user=username,
+                                                                                     pwd=rds_key,
+                                                                                     host=hostname,
+                                                                                     port=5432
+                                                                                     ))
+
+cur = con.cursor()
+
+def get_nearest_node(lng, lat):
+    cur.execute("""
+    SELECT id, the_geom <-> ST_SetSRID(ST_MakePoint(%s, %s), 4326) AS dist 
+    FROM brighton_edges_noded_vertices_pgr
+    ORDER BY dist LIMIT 1;""", (lng, lat))
+    # TODO: hacky
+    pt_string = cur.fetchall()[0][0][6:-1].split()
+    return tuple([float(z) for z in pt_string])
+
+
 def get_route(ori_str, des_str):
     g1 = geocoder.osm(ori_str + " Brighton, MA")
     g2 = geocoder.osm(des_str + " Brighton, MA")
@@ -37,28 +55,27 @@ def get_route(ori_str, des_str):
     route = nx.shortest_path(brighton_G, n1, n2)
     return route
 
-route = get_route("34 Claymoss Road", "371 Washington St")
-route_pairs = zip(route[:-1],route[1:])
 
-# print({k: angle_data[k] for k in route_pairs})
+def fixed_route(rows):
+    #dedupe and keep order
+    rows = list(dict.fromkeys(rows))
+    first_row = rows.pop(0)
+    relinked = [(first_row[2],first_row[3], first_row[1])]
+    for row in rows:
+        row = (row[1], row[2], row[3])
+        last_row = relinked[-1]
+        if row == last_row:
+            continue
+        elif last_row[2] == row[1]:
+            relinked.append(row)
+        else:
+            relinked.append((row[2], row[1], row[0]))
+    return relinked
 
-# for edge in route_pairs:
-#     print(edge)
-#     print(int(angle_data[edge]) == 1)
-color_edge_map = {}
-for edge in route_pairs:
-    print(edge)
-    print(angle_data[edge])
-    if angle_data[edge] in color_edge_map:
-        color_edge_map[angle_data[edge]].append(edge)
-    else:
-        color_edge_map[angle_data[edge]] = [edge]
+# why do we need to split this ourselves??
+def query_route(ori_int, des_int):
+    cur.execute("SELECT node, b.angle_class, ST_AsText(ST_StartPoint(b.geom)), ST_AsText(ST_EndPoint(b.geom)), ST_AsText(b.geom) FROM pgr_dijkstra('SELECT id, source, target, cost FROM brighton_edges', %s, %s, directed:=true) a LEFT JOIN brighton_edges b ON (a.edge = b.id)", (ori_int, des_int))
+    raw_route = cur.fetchall()
+    return fixed_route(raw_route)
 
-# color_edge_map = {num: 
-#         [edge for edge in route_pairs if int(angle_data[edge]) == num] 
-#             for num in range(5)}
-# # # print(angle_data)
-# print(angle_data.items())
-
-print(color_edge_map)
 

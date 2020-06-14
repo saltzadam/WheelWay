@@ -2,18 +2,18 @@ import geocoder
 import pickle as pkl
 import networkx as nx
 import osmnx as ox
+import psycopg2
+import sqlalchemy as sql
 
+import shapely
 import dash_leaflet as dl
 import plotly_express as px
 
 import math 
-with open("brighton_graph.pkl", 'rb') as pklfile:
-    brighton_G = pkl.load(pklfile)
 
 # controls angle scaling for balanced paths
 ALPHA = 2/5
 
-edge_getter = brighton_G.edges
 
 Safe = px.colors.qualitative.Safe
 angle_color_map = {
@@ -32,81 +32,145 @@ angle_dash_map = {
         4: "1 1",
         None: None}
 
+hostname = "wheelway2.cgfv5tiyps6x.us-east-1.rds.amazonaws.com"
+username = "postgres"
+with open('/home/adam/rdskey') as keyfile:
+    rds_key = keyfile.readline().strip()
+ 
+con = psycopg2.connect(database = "wheelway", 
+                       user=username, 
+                       host=hostname, 
+                       password=rds_key, 
+                       port=5432
+                      )
+
+engine = sql.create_engine('postgresql+psycopg2://{user}:{pwd}@{host}:{port}/wheelway'.format(user=username,
+                                                                                     pwd=rds_key,
+                                                                                     host=hostname,
+                                                                                     port=5432
+                                                                                     ))
+
+
+def get_nearest_node(lng, lat):
+    cur.execute("""
+    SELECT source, geom <-> ST_SetSRID(ST_MakePoint(%s, %s), 4326) AS dist 
+    FROM my_edges
+    ORDER BY dist LIMIT 1;""", (lng, lat))
+    raw = cur.fetchall()
+    ID = raw[0][0]
+    print(ID)
+    return ID
+
+# converts 'POINT (coord, coord)' to (coord, coord)
+def pt_to_pair(ptstring):
+    pt = shapely.wkt.loads(ptstring)
+    return pt.coords[0]
+
+
+
+def fixed_route(rows):
+    def process_row(row):
+        return (pt_to_pair(row[0]), pt_to_pair(row[1]), row[2])
+    #dedupe and keep order
+    rows = list(dict.fromkeys(rows))
+    
+    # last row is basically null
+    rows = rows[:-1]
+
+    # add rows, flipping the two points if necessary. should be
+    # (start point, end point, angle class)
+    first_row = rows.pop(0)
+    relinked = [process_row(first_row)]
+    for row in rows:
+        row = process_row(row)
+        last_row = relinked[-1]
+        if row == last_row:
+            continue
+        elif last_row[1] == row[0]:
+            relinked.append(row)
+        elif last_row[1] == row[1]:
+            relinked.append([row[1], row[0], row[2]])
+        else:# row == (None, None, None):
+            continue
+    return relinked
+
+
+FOUND_ROUTE_MESSAGE = "Here's your route."
+
+def query_route(ori_int, des_int, routing, cur):
+    print(routing)
+    if routing == 'short':
+        cur.execute("""SELECT ST_AsText(ST_StartPoint(b.geom)), ST_AsText(ST_EndPoint(b.geom)), b.angle_class 
+                       FROM pgr_dijkstra('SELECT id, source, target, cost FROM my_edges', %s, %s, TRUE) a 
+                       LEFT JOIN my_edges b 
+                       ON (a.edge = b.id)""", (ori_int, des_int))
+        raw_route = cur.fetchall()
+        return fixed_route(raw_route), FOUND_ROUTE_MESSAGE
+    elif routing == 'ADA':
+        cur.execute("""SELECT st_astext(st_startpoint(b.geom)), st_astext(st_endpoint(b.geom)), b.angle_class
+                       FROM pgr_dijkstra('SELECT id, source, target, cost 
+                                          FROM my_edges 
+                                          WHERE angle_deg < 5 AND angle_deg > -5', %s, %s, true) a 
+                       LEFT JOIN my_edges b 
+                       ON (a.edge = b.id)""", (ori_int, des_int))
+        raw_route = cur.fetchall()
+        if raw_route == []:
+            return None,  "We're sorry, there's no ADA-compliant route available."
+        return fixed_route(raw_route), FOUND_ROUTE_MESSAGE
+    elif routing == 'balance':
+        # scaling factor for angle
+        ALPHA = 2/5
+        cur.execute("""SELECT ST_AsText(ST_StartPoint(b.geom)), ST_AsText(ST_EndPoint(b.geom)), b.angle_class 
+                       FROM pgr_dijkstra('SELECT id, source, target, (cost * (1 + %s * abs(angle_deg)/15)) AS cost FROM my_edges', %s, %s, TRUE) a 
+                       LEFT JOIN my_edges b 
+                       ON (a.edge = b.id)""", (ALPHA, ori_int, des_int))
+        raw_route = cur.fetchall()
+        return fixed_route(raw_route), FOUND_ROUTE_MESSAGE
+    elif routing == 'slope':
+        for i in range(31):
+            cur.execute("""SELECT st_astext(st_startpoint(b.geom)), st_astext(st_endpoint(b.geom)), b.angle_class
+                           FROM pgr_dijkstra('SELECT id, source, target, cost 
+                                              FROM my_edges 
+                                              WHERE angle_deg < %s AND angle_deg > -(%s)', %s, %s, true) a 
+                           LEFT JOIN my_edges b 
+                           ON (a.edge = b.id)""", (i, i, ori_int, des_int))
+            raw_route = cur.fetchall()
+            if raw_route == []:
+                continue
+            else:
+                def slope_route_message(j):
+                    return "We found you a route with maximum slope " + str(i) + " degrees."
+                return fixed_route(raw_route), slope_route_message(i)
+        return None, "There's no route which avoids hills with slope up to 30 degrees!"
+            
+ 
 
 def get_route(ori_str, des_str,routing):
     g1 = geocoder.osm(ori_str + " Brighton, MA")
     g2 = geocoder.osm(des_str + " Brighton, MA")
     p1 = (g1.json['lng'], g1.json['lat'])
     p2 = (g2.json['lng'], g2.json['lat'])
-    n1 = ox.get_nearest_node(brighton_G,p1, method='haversine')
-    n2 = ox.get_nearest_node(brighton_G,p2, method='haversine')
-    if routing=='short':
-        try:
-            route = nx.shortest_path(brighton_G, n1, n2, weight='length_m')
-        except nx.NetworkXNoPath:
-            route = None
-    elif routing=='ADA':
-        def ada_fn(u,v,data):
-            if abs(data[0]['angle_deg']) >= 5:
-                return None
-            else:
-                return data[0]['length_m']
-        try:
-            route = nx.single_source_dijkstra(brighton_G, n1, n2, weight=ada_fn)[1]
-        except nx.NetworkXNoPath:
-            route = None
-    elif routing=='balance':
-       def slope_fn(u,v,data):
-            return data[0]['length_m'] * (1 + ALPHA * abs(data[0]['angle_deg']))/15
-       try:
-            route = nx.single_source_dijkstra(brighton_G, n1, n2, weight=slope_fn)[1]
-       except nx.NetworkXNoPath:
-            route = None
-    elif routing=='slope':
-        for i in range(1,15):
-            try:
-                route = nx.shortest_path(brighton_G, n1, n2, weight=(lambda u,v,data : None if abs(data[0]['angle_m']) > i else data[0]['length_m']))
-            except:
-                continue
-        route = None
-    return route, " "
+    n1 = get_nearest_node(p1[0], p1[1])
+    n2 = get_nearest_node(p2[0], p2[1])
+    # this returns a list (lng, lat, class)
+    cur = con.cursor()
+    route_message = query_route(n1, n2, routing, cur)
+    cur.close()
+    # returns a list of tuples [(lng, lat)]
+    return route_message
 
-
-def make_line(u,v):
-    geom = edge_getter[u,v,0]['geometry']
-    p0 = geom.coords[0]
-    p1 = geom.coords[-1]
-    angle_class = edge_getter[u,v,0]['angle_class']
+def make_line(row):
+    source, target, angle_class = row
     color = angle_color_map[angle_class]
-    return dl.Polyline(positions=[[p0[1], p0[0]], [p1[1], p1[0]]], color=color, weight= 2 + angle_class)
-
-def get_edge_color(row):
-    return str(angle_color_map[row['angle_class']])
-
-# # determines if they're within VAR degrees of each other
-# def aligned(line0, line1):
-#     VAR = 5
-#     if line0.color != line1.color:
-#         return False
-#     (p0, p1) = line0.getLatLngs
-#     (p2, p3) = line1.getLatLngs
-#     vec0 = (p1[0] - p0[0], p1[1] - p0[1])
-#     vec1 = (p3[0] - p2[0], p3[1] - p2[1])
-#     dot = vec0[0] * vec1[0] + vec0[1] * vec1[1]
-#     mag0 = math.hypot(vec0)
-#     mag1 = math.hypot(vec1)
-#     costheta = dot/(mag0 * mag1)
-#     return math.degrees(math.acos(costheta)) < VAR
+    return dl.Polyline(positions=[[source[1], source[0]], [target[1], target[0]]], color=color, weight= 2 + angle_class)
 
 def make_lines(route):
-    route_pairs = list(zip(route[:-1], route[1:]))
-    # just insert the first element
-    first_seg = route_pairs.pop(0)
-    lines = [make_line(first_seg[0], first_seg[1])]
+    first_seg = route.pop(0)
+    lines = [make_line(first_seg)]
     # now we have to check the accumulator as we go
-    for pair in route_pairs:
+    for row in route:
         last_line = lines[-1]
-        new_line = make_line(pair[0],pair[1])
+        new_line = make_line(row)
         if (last_line.color == new_line.color):
             last_line.positions.append(new_line.positions[1])
             lines.pop()
@@ -115,7 +179,7 @@ def make_lines(route):
             lines.append(new_line)
         
     print('drew',len(lines),'lines')
-    return lines, "Here's your route."
+    return lines
 
 def get_bounds(lines):
     points = [line.positions for line in lines]
@@ -129,14 +193,9 @@ STANDARD_BOUNDS = [[42.331, -71.17], [42.36, -71.13405]]
 
 def get_fig(ori_str, des_str, routing):
     route, message = get_route(ori_str, des_str, routing)
+    print(route, message)
     if route is None:
-        if routing=='ADA':
-            return "We're sorry, there's no ADA-compliant route available.", [], STANDARD_BOUNDS
-        elif routing=='slope':
-            return "There's no route which avoids hills with an angle of at least 15 degrees.", [], STANDARD_BOUNDS
-        else:
-            return "We're sorry, somehow you picked two disconnected points.", [], STANDARD_BOUNDS
-    else:
-        lines, message = make_lines(route)
-        return message, lines, get_bounds(lines)
+        return message, [], STANDARD_BOUNDS # should be some standard bounds maybe
+    lines = make_lines(route)
+    return message, lines, get_bounds(lines)
 

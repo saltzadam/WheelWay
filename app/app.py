@@ -4,13 +4,27 @@ import dash_html_components as html
 from dash.dependencies import Input, Output, State
 
 import dash_leaflet as dl
+from dash_leaflet import express as dlx
 
+import utils
 
-# import app.utils as utils
-
+import plotly_express as px
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
+# just write out rgb and maybe don't need plotly import
+Safe = px.colors.qualitative.Safe
+angle_color_map = {
+        0: Safe[3],
+        1: Safe[6],
+        2: Safe[2],
+        3: Safe[1],
+        4: Safe[9],
+        None: 'blue'}
 
+
+marks = ["0-1", "1-2", "2-3", "3-4", "4+"]
+colorscale = list(angle_color_map.values())[0:5]
+colorbar = dlx.categorical_colorbar(categories=marks, colorscale=colorscale, width=300, height=30, position="bottomleft")
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
@@ -41,7 +55,7 @@ app.layout = html.Div([
             style={'width': '400px'})]),
     html.Div(id='warning'),
     html.Div(id='a_string', children=""),
-    html.Div([dl.Map([dl.TileLayer(), dl.LayerGroup(id='layer')], style={'width': '1000px', 'height': '500px'}, id="the_map")]),
+    html.Div([dl.Map([dl.TileLayer(), dl.LayerGroup(id='layer'), colorbar], style={'width': '1000px', 'height': '500px'}, id="the_map")]),
     html.Div(id='blurs', style={'display': 'none'}),
     html.Div(id='dd-output-container', style={'display': 'none'})])
 
@@ -71,20 +85,20 @@ def update_blurs(blur_o, blur_d,routing):
 def update_dd(value):
     return value
 
-# @app.callback(
-#     [ Output('warning', 'children'),
-#       Output('layer', 'children'),
-#       Output('the_map','bounds')],
-#     [Input('blurs', 'children')],# Input('dest', 'value')],
-#     [State('origin', 'value'),
-#      State('dest', 'value'),
-#      State('routing', 'value')]
-#     )
-# def update_figure(nb, ori_str, dest_str, routing):
-#     if (not ori_str) or (not dest_str):
-#         return [], 'Enter your origin and destination!', utils.STANDARD_BOUNDS 
-#     else:
-#         return utils.get_fig(ori_str, dest_str, routing)
+@app.callback(
+    [ Output('warning', 'children'),
+      Output('layer', 'children'),
+      Output('the_map','bounds')],
+    [Input('blurs', 'children')],# Input('dest', 'value')],
+    [State('origin', 'value'),
+     State('dest', 'value'),
+     State('routing', 'value')]
+    )
+def update_figure(nb, ori_str, dest_str, routing):
+    if (not ori_str) or (not dest_str):
+        return [], 'Enter your origin and destination!', utils.STANDARD_BOUNDS 
+    else:
+        return utils.get_fig(ori_str, dest_str, routing)
 
 if __name__ == '__main__':
     app.run_server(debug=True,
