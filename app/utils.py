@@ -35,19 +35,6 @@ username = "postgres"
 #    rds_key = keyfile.readline().strip()
 rds_key = os.environ['RDS_KEY']
  
-con = psycopg2.connect(database = "wheelway", 
-                       user=username, 
-                       host=hostname, 
-                       password=rds_key, 
-                       port=5432
-                      )
-
-engine = sql.create_engine('postgresql+psycopg2://{user}:{pwd}@{host}:{port}/wheelway'.format(user=username,
-                                                                                     pwd=rds_key,
-                                                                                     host=hostname,
-                                                                                     port=5432
-                                                                                     ))
-
 
 def get_nearest_node(lng, lat, cur):
     cur.execute("""
@@ -143,7 +130,7 @@ def query_route(ori_int, des_int, routing, cur):
             
  
 
-def get_route(ori_str, des_str,routing):
+def get_route(ori_str, des_str,routing,con):
     g1 = geocoder.osm(ori_str + " Brighton, MA")
     g2 = geocoder.osm(des_str + " Brighton, MA")
     p1 = (g1.json['lng'], g1.json['lat'])
@@ -190,10 +177,25 @@ def get_bounds(lines):
 STANDARD_BOUNDS = [[42.331, -71.17], [42.36, -71.13405]]
 
 def get_fig(ori_str, des_str, routing):
-    route, message = get_route(ori_str, des_str, routing)
+    con = psycopg2.connect(database = "wheelway", 
+                       user=username, 
+                       host=hostname, 
+                       password=rds_key, 
+                       port=5432
+                      )
+
+    # engine = sql.create_engine('postgresql+psycopg2://{user}:{pwd}@{host}:{port}/wheelway'.format(user=username,
+    #                                                                                  pwd=rds_key,
+    #                                                                                  host=hostname,
+    #                                                                                  port=5432
+    #                                                                                  ))
+    route, message = get_route(ori_str, des_str, routing, con)
     print(route, message)
     if route is None:
         return message, [], STANDARD_BOUNDS # should be some standard bounds maybe
     lines = make_lines(route)
+    con.commit()
+    con.close
+    # engine.dispose()
     return message, lines, get_bounds(lines)
 
