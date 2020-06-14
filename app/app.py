@@ -6,7 +6,7 @@ from dash.dependencies import Input, Output, State
 import dash_leaflet as dl
 from dash_leaflet import express as dlx
 
-import app.utils
+import app.utils as utils
 
 import plotly_express as px
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
