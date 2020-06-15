@@ -86,18 +86,18 @@ def query_route(ori_int, des_int, routing, cur):
     print(routing)
     if routing == 'short':
         cur.execute("""SELECT ST_AsText(ST_StartPoint(b.geom)), ST_AsText(ST_EndPoint(b.geom)), b.angle_class 
-                       FROM pgr_dijkstra('SELECT id, source, target, cost FROM my_edges', %s, %s, TRUE) a 
+                       FROM pgr_dijkstra('SELECT id, source, target, cost, cost AS reverse_cost FROM my_edges', %s, %s, false) a 
                        LEFT JOIN my_edges b 
-                       ON (a.edge = b.id)""", (ori_int, des_int))
+                       ON (a.edge = b.osmid)""", (ori_int, des_int))
         raw_route = cur.fetchall()
         return fixed_route(raw_route), FOUND_ROUTE_MESSAGE
     elif routing == 'ADA':
         cur.execute("""SELECT st_astext(st_startpoint(b.geom)), st_astext(st_endpoint(b.geom)), b.angle_class
-                       FROM pgr_dijkstra('SELECT id, source, target, cost 
+                       FROM pgr_dijkstra('SELECT id, source, target, cost, cost AS reverse_cost 
                                           FROM my_edges 
-                                          WHERE angle_deg < 5 AND angle_deg > -5', %s, %s, true) a 
+                                          WHERE angle_deg < 5 AND angle_deg > -5', %s, %s, false) a 
                        LEFT JOIN my_edges b 
-                       ON (a.edge = b.id)""", (ori_int, des_int))
+                       ON (a.edge = b.osmid)""", (ori_int, des_int))
         raw_route = cur.fetchall()
         if raw_route == []:
             return None,  "We're sorry, there's no ADA-compliant route available."
@@ -106,19 +106,19 @@ def query_route(ori_int, des_int, routing, cur):
         # scaling factor for angle
         ALPHA = 2/5
         cur.execute("""SELECT ST_AsText(ST_StartPoint(b.geom)), ST_AsText(ST_EndPoint(b.geom)), b.angle_class 
-                       FROM pgr_dijkstra('SELECT id, source, target, (cost * (1 + %s * abs(angle_deg)/15)) AS cost FROM my_edges', %s, %s, TRUE) a 
+                       FROM pgr_dijkstra('SELECT id, source, target, (cost * (1 + %s * abs(angle_deg)/15)) AS cost, (cost * (1 + %s * abs(angle_deg)/15)) AS reverse_cost FROM my_edges', %s, %s, false) a 
                        LEFT JOIN my_edges b 
-                       ON (a.edge = b.id)""", (ALPHA, ori_int, des_int))
+                       ON (a.edge = b.osmid)""", (ALPHA, ori_int, des_int))
         raw_route = cur.fetchall()
         return fixed_route(raw_route), FOUND_ROUTE_MESSAGE
     elif routing == 'slope':
         for i in range(31):
             cur.execute("""SELECT st_astext(st_startpoint(b.geom)), st_astext(st_endpoint(b.geom)), b.angle_class
-                           FROM pgr_dijkstra('SELECT id, source, target, cost 
+                           FROM pgr_dijkstra('SELECT id, source, target, cost, cost AS reverse_cost
                                               FROM my_edges 
-                                              WHERE angle_deg < %s AND angle_deg > -(%s)', %s, %s, true) a 
+                                              WHERE angle_deg < %s AND angle_deg > -(%s)', %s, %s, false) a 
                            LEFT JOIN my_edges b 
-                           ON (a.edge = b.id)""", (i, i, ori_int, des_int))
+                           ON (a.edge = b.osmid)""", (i, i, ori_int, des_int))
             raw_route = cur.fetchall()
             if raw_route == []:
                 continue
@@ -190,7 +190,6 @@ def get_fig(ori_str, des_str, routing):
     #                                                                                  port=5432
     #                                                                                  ))
     route, message = get_route(ori_str, des_str, routing, con)
-    print(route, message)
     if route is None:
         return message, [], STANDARD_BOUNDS # should be some standard bounds maybe
     lines = make_lines(route)
