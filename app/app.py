@@ -12,13 +12,12 @@ import plotly_express as px
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 # just write out rgb and maybe don't need plotly import
-Safe = px.colors.qualitative.Safe
 angle_color_map = {
-        0: Safe[3],
-        1: Safe[6],
-        2: Safe[2],
-        3: Safe[1],
-        4: Safe[9],
+        0: "#45337dff",
+        1: "#33638dff",
+        2: "#218f8dff",
+        3: "#35b479ff",
+        4: "#8dd544ff",
         None: 'blue'}
 
 
