@@ -85,14 +85,14 @@ FOUND_ROUTE_MESSAGE = "Here's your route."
 def query_route(ori_int, des_int, routing, cur):
     print(routing)
     if routing == 'short':
-        cur.execute("""SELECT ST_AsText(ST_StartPoint(b.geom)), ST_AsText(ST_EndPoint(b.geom)), b.angle_class 
+        cur.execute("""SELECT ST_AsText(ST_StartPoint(b.geom)), ST_AsText(ST_EndPoint(b.geom)), b.angle_clas 
                        FROM pgr_dijkstra('SELECT id, source, target, cost, cost AS reverse_cost FROM my_edges', %s, %s, false) a 
                        LEFT JOIN my_edges b 
                        ON (a.edge = b.osmid)""", (ori_int, des_int))
         raw_route = cur.fetchall()
         return fixed_route(raw_route), FOUND_ROUTE_MESSAGE
     elif routing == 'ADA':
-        cur.execute("""SELECT st_astext(st_startpoint(b.geom)), st_astext(st_endpoint(b.geom)), b.angle_class
+        cur.execute("""SELECT st_astext(st_startpoint(b.geom)), st_astext(st_endpoint(b.geom)), b.angle_clas
                        FROM pgr_dijkstra('SELECT id, source, target, cost, cost AS reverse_cost 
                                           FROM my_edges 
                                           WHERE angle_deg < 5 AND angle_deg > -5', %s, %s, false) a 
@@ -105,7 +105,7 @@ def query_route(ori_int, des_int, routing, cur):
     elif routing == 'balance':
         # scaling factor for angle
         ALPHA = 2/5
-        cur.execute("""SELECT ST_AsText(ST_StartPoint(b.geom)), ST_AsText(ST_EndPoint(b.geom)), b.angle_class 
+        cur.execute("""SELECT ST_AsText(ST_StartPoint(b.geom)), ST_AsText(ST_EndPoint(b.geom)), b.angle_clas
                        FROM pgr_dijkstra('SELECT id, source, target, (cost * (1 + %s * abs(angle_deg)/15)) AS cost, (cost * (1 + %s * abs(angle_deg)/15)) AS reverse_cost FROM my_edges', %s, %s, false) a 
                        LEFT JOIN my_edges b 
                        ON (a.edge = b.osmid)""", (ALPHA, ori_int, des_int))
@@ -113,7 +113,7 @@ def query_route(ori_int, des_int, routing, cur):
         return fixed_route(raw_route), FOUND_ROUTE_MESSAGE
     elif routing == 'slope':
         for i in range(31):
-            cur.execute("""SELECT st_astext(st_startpoint(b.geom)), st_astext(st_endpoint(b.geom)), b.angle_class
+            cur.execute("""SELECT st_astext(st_startpoint(b.geom)), st_astext(st_endpoint(b.geom)), b.angle_clas
                            FROM pgr_dijkstra('SELECT id, source, target, cost, cost AS reverse_cost
                                               FROM my_edges 
                                               WHERE angle_deg < %s AND angle_deg > -(%s)', %s, %s, false) a 
