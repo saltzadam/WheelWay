@@ -11,23 +11,13 @@ import os
 # controls angle scaling for balanced paths
 ALPHA = 2/5
 
-
-Safe = px.colors.qualitative.Safe
 angle_color_map = {
-        0: Safe[3],
-        1: Safe[6],
-        2: Safe[2],
-        3: Safe[1],
-        4: Safe[9],
+        0: "#45337dff",
+        1: "#33638dff",
+        2: "#218f8dff",
+        3: "#35b479ff",
+        4: "#8dd544ff",
         None: 'blue'}
-
-angle_dash_map = {
-        0: None,
-        1: "4 1",
-        2: "3 1",
-        3: "2 1",
-        4: "1 1",
-        None: None}
 
 hostname = "wheelway2.cgfv5tiyps6x.us-east-1.rds.amazonaws.com"
 username = "postgres"
@@ -86,14 +76,14 @@ def query_route(ori_int, des_int, routing, cur):
     print(routing)
     if routing == 'short':
         cur.execute("""SELECT ST_AsText(ST_StartPoint(b.geom)), ST_AsText(ST_EndPoint(b.geom)), b.angle_clas 
-                       FROM pgr_dijkstra('SELECT osmid, source, target, cost, cost AS reverse_cost FROM my_edges', %s, %s, false) a 
+                       FROM pgr_dijkstra('SELECT id, source, target, cost, cost AS reverse_cost FROM my_edges', %s, %s, false) a 
                        LEFT JOIN my_edges b 
                        ON (a.edge = b.osmid)""", (ori_int, des_int))
         raw_route = cur.fetchall()
         return fixed_route(raw_route), FOUND_ROUTE_MESSAGE
     elif routing == 'ADA':
         cur.execute("""SELECT st_astext(st_startpoint(b.geom)), st_astext(st_endpoint(b.geom)), b.angle_clas
-                       FROM pgr_dijkstra('SELECT osmid, source, target, cost, cost AS reverse_cost 
+                       FROM pgr_dijkstra('SELECT id, source, target, cost, cost AS reverse_cost 
                                           FROM my_edges 
                                           WHERE angle_deg < 5 AND angle_deg > -5', %s, %s, false) a 
                        LEFT JOIN my_edges b 
@@ -106,15 +96,15 @@ def query_route(ori_int, des_int, routing, cur):
         # scaling factor for angle
         ALPHA = 2/5
         cur.execute("""SELECT ST_AsText(ST_StartPoint(b.geom)), ST_AsText(ST_EndPoint(b.geom)), b.angle_clas
-                       FROM pgr_dijkstra('SELECT osmid, source, target, (cost * (1 + %s * abs(angle_deg)/15)) AS cost, (cost * (1 + %s * abs(angle_deg)/15)) AS reverse_cost FROM my_edges', %s, %s, false) a 
+                       FROM pgr_dijkstra('SELECT id, source, target, (cost * (1 + %s * abs(angle_deg)/15)) AS cost, (cost * (1 + %s * abs(angle_deg)/15)) AS reverse_cost FROM my_edges', %s, %s, false) a 
                        LEFT JOIN my_edges b 
-                       ON (a.edge = b.osmid)""", (ALPHA, ori_int, des_int))
+                       ON (a.edge = b.osmid)""", (ALPHA, ALPHA, ori_int, des_int))
         raw_route = cur.fetchall()
         return fixed_route(raw_route), FOUND_ROUTE_MESSAGE
     elif routing == 'slope':
         for i in range(31):
             cur.execute("""SELECT st_astext(st_startpoint(b.geom)), st_astext(st_endpoint(b.geom)), b.angle_clas
-                           FROM pgr_dijkstra('SELECT osmid, source, target, cost, cost AS reverse_cost
+                           FROM pgr_dijkstra('SELECT id, source, target, cost, cost AS reverse_cost
                                               FROM my_edges 
                                               WHERE angle_deg < %s AND angle_deg > -(%s)', %s, %s, false) a 
                            LEFT JOIN my_edges b 
@@ -147,7 +137,7 @@ def get_route(ori_str, des_str,routing,con):
 def make_line(row):
     source, target, angle_class = row
     color = angle_color_map[angle_class]
-    return dl.Polyline(positions=[[source[1], source[0]], [target[1], target[0]]], color=color, weight= 2 + angle_class)
+    return dl.Polyline(positions=[[source[1], source[0]], [target[1], target[0]]], color=color, weight= 4)
 
 def make_lines(route):
     first_seg = route.pop(0)
