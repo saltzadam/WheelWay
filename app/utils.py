@@ -80,6 +80,7 @@ def query_route(ori_int, des_int, routing, cur):
                        LEFT JOIN my_edges b 
                        ON (a.edge = b.osmid)""", (ori_int, des_int))
         raw_route = cur.fetchall()
+        print(raw_route)
         return fixed_route(raw_route), FOUND_ROUTE_MESSAGE
     elif routing == 'ADA':
         cur.execute("""SELECT st_astext(st_startpoint(b.geom)), st_astext(st_endpoint(b.geom)), b.angleclass
@@ -89,7 +90,6 @@ def query_route(ori_int, des_int, routing, cur):
                        LEFT JOIN my_edges b 
                        ON (a.edge = b.osmid)""", (ori_int, des_int))
         raw_route = cur.fetchall()
-        print(raw_route)
         if raw_route == []:
             return None,  "We're sorry, there's no ADA-compliant route available."
         return fixed_route(raw_route), FOUND_ROUTE_MESSAGE
