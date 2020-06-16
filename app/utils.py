@@ -57,6 +57,9 @@ def fixed_route(rows):
     first_row = rows.pop(0)
     relinked = [process_row(first_row)]
     for row in rows:
+        #last row:
+        if row == (None, None, None):
+            continue
         row = process_row(row)
         last_row = relinked[-1]
         if row == last_row:
@@ -65,7 +68,7 @@ def fixed_route(rows):
             relinked.append(row)
         elif last_row[1] == row[1]:
             relinked.append([row[1], row[0], row[2]])
-        else:# row == (None, None, None):
+        else: # probably should throw # row == (None, None, None):
             continue
     return relinked
 
