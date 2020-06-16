@@ -174,11 +174,6 @@ def get_fig(ori_str, des_str, routing):
                        port=5432
                       )
 
-    # engine = sql.create_engine('postgresql+psycopg2://{user}:{pwd}@{host}:{port}/wheelway'.format(user=username,
-    #                                                                                  pwd=rds_key,
-    #                                                                                  host=hostname,
-    #                                                                                  port=5432
-    #                                                                                  ))
     route, message = get_route(ori_str, des_str, routing, con)
     if route is None:
         return message, [], STANDARD_BOUNDS # should be some standard bounds maybe
