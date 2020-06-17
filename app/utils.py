@@ -19,7 +19,7 @@ angle_color_map = {
         4: "#8dd544ff",
         None: 'blue'}
 
-hostname = "wheelway2.cgfv5tiyps6x.us-east-1.rds.amazonaws.com"
+hostname = "wheelway4.cgfv5tiyps6x.us-east-1.rds.amazonaws.com"
 username = "postgres"
 #with open('rdskey') as keyfile:
 #    rds_key = keyfile.readline().strip()
