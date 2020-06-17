@@ -59,7 +59,7 @@ def fixed_route(rows):
     if first_row[1] == second_row[0]:
         relinked = [first_row, second_row]
     elif first_row[0] == second_row[0]:
-        relinked = [(first_row[1],first_row[0],first_row[2]),second_row[0]]
+        relinked = [(first_row[1],first_row[0],first_row[2]),second_row]
     elif first_row[1] == second_row[1]:
         relinked = [first_row, (second_row[1], second_row[0], second_row[2])]
     elif first_row[0] == second_row[1]:
