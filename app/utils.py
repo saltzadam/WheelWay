@@ -54,18 +54,17 @@ def fixed_route(rows):
 
     # add rows, flipping the two points if necessary. should be
     # (start point, end point, angle class)
-    first_row = rows.pop(0)
+    first_row = process_row(rows.pop(0))
     # fix this tomorrow:!
-    relinked = [first_row]
-    # second_row = rows.pop(0)
-    # if first_row[1] == second_row[0]:
-    #     relinked = [first_row, second_row]
-    # elif first_row[0] == second_row[0]:
-    #     relinked = [(first_row[1],first_row[0],first_row[2]),second_row]
-    # elif first_row[1] == second_row[1]:
-    #     relinked = [first_row, (second_row[1], second_row[0], second_row[2])]
-    # elif first_row[0] == second_row[1]:
-    #     relinked = [(first_row[1],first_row[0],first_row[2]), (second_row[1], second_row[0], second_row[2])]
+    second_row = process_row(rows.pop(0))
+    if first_row[1] == second_row[0]:
+        relinked = [first_row, second_row]
+    elif first_row[0] == second_row[0]:
+        relinked = [(first_row[1],first_row[0],first_row[2]),second_row]
+    elif first_row[1] == second_row[1]:
+        relinked = [first_row, (second_row[1], second_row[0], second_row[2])]
+    elif first_row[0] == second_row[1]:
+        relinked = [(first_row[1],first_row[0],first_row[2]), (second_row[1], second_row[0], second_row[2])]
     for row in rows:
         #last row:
         if row == (None, None, None):
