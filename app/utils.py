@@ -12,19 +12,23 @@ import os
 ALPHA = 2/5
 
 angle_color_map = {
-        0: "#45337dff",
-        1: "#33638dff",
+        4: "#45337dff",
+        3: "#33638dff",
         2: "#218f8dff",
-        3: "#35b479ff",
-        4: "#8dd544ff",
+        1: "#35b479ff",
+        0: "#8dd544ff",
         None: 'blue'}
+
 
 hostname = "wheelway4.cgfv5tiyps6x.us-east-1.rds.amazonaws.com"
 username = "postgres"
 #with open('rdskey') as keyfile:
 #    rds_key = keyfile.readline().strip()
-rds_key = os.environ['RDS_KEY']
- 
+try:
+    rds_key = os.environ['RDS_KEY']
+except:
+    with open('/home/adam/rdskey') as keyfile:
+        rds_key = keyfile.readline().strip()
 
 def get_nearest_node(lng, lat, cur):
     cur.execute("""

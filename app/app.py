@@ -6,22 +6,24 @@ from dash.dependencies import Input, Output, State
 import dash_leaflet as dl
 from dash_leaflet import express as dlx
 
-import app.utils as utils
+#import app.utils as utils
+import utils as utils
 
 import plotly_express as px
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 # just write out rgb and maybe don't need plotly import
 angle_color_map = {
-        0: "#45337dff",
-        1: "#33638dff",
+        0: "#8dd544ff",
+        1: "#35b479ff",
         2: "#218f8dff",
-        3: "#35b479ff",
-        4: "#8dd544ff",
+        3: "#33638dff",
+        4: "#45337dff",
         None: 'blue'}
 
 
-marks = ["0-1", "1-2", "2-3", "3-4", "4+"]
+#marks = ["0-1", "1-2", "2-3", "3-4", "4+"]
+marks = ["Low slope", "", "", "", "High slope"]
 colorscale = list(angle_color_map.values())[0:5]
 colorbar = dlx.categorical_colorbar(categories=marks, colorscale=colorscale, width=300, height=30, position="bottomleft")
 
@@ -46,9 +48,9 @@ app.layout = html.Div([
     html.Div(id='container', children = [dcc.Input(id='dest', value='', type='text', debounce=True),
         dcc.Dropdown(id='routing',
             options = [
-                {'label': 'Find me an ADA accessible route.', 'value': 'ADA'},
-                {'label': 'Find me a route without very steep slopes', 'value': 'slope'},
-                {'label': "Find me a route which isn't too long or steep", 'value': 'balance'},
+                {'label': 'Find an "ADA accessible" route.', 'value': 'ADA'},
+                {'label': "Minimize the worst slope I'll see.", 'value': 'slope'},
+                {'label': "Balance length and steepness", 'value': 'balance'},
                 {'label': 'Just show me the shortest route', 'value': 'short'}],
             value='ADA',
             style={'width': '400px'})]),
