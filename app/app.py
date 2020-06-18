@@ -50,29 +50,35 @@ app.layout = html.Div([
         dbc.Input(id='origin', placeholder="Type your origin here", value='', type='text', debounce=True, bs_size="lg"),
         # dcc.Markdown("Destination:"),
         dbc.Input(id='dest', placeholder="Type your destination here", value='', type='text', debounce=True, bs_size="lg"),
-        html.Hr(),
     ]), width=6),
-    html.Div([
-        dbc.Nav([
-                dbc.NavLink("Minimize slope", id='slope_button', n_clicks=0, href="#"),
-                dbc.NavLink("Balance slope and length", id='balance_button', n_clicks=0, href="#"),
-                dbc.NavLink("Shortest route", id='short_button', n_clicks=0, href="#")
-                ],
-            pills=True)
-        ]),
+    dbc.Row([
+    dbc.Col([
+        dcc.Dropdown(id="routing", 
+                     value="Find me a route!", 
+                     options = [
+                         {"label": "Minimize slope", "value": 'slope'},
+                         {"label": "Balance slope and length", "value":'balance'},
+                         {"label": "Shortest route", 'value': 'short'}
+                         ], style={'width': '800px'}),
+        ], width=6),
+    dbc.Col(html.Div([
+        dcc.Slider(id='alpha', min = .4, max = 20.4, step = 1, value=.4,
+            marks={.4: {'label': "I don't mind some hills", 'style': {'font-size':'12pt', 'color':'blue'}}, 20.4: {'label': "I hate hills!", 'style': {'font-size':'12pt', 'color':'red'}}})
+        ], style={'display':'none'}, id='slider-display'), width=4)
+    ]),
     html.Div(id='warning'),
     html.Div(id='a_string', children=""),
-    html.Div([dl.Map([dl.TileLayer(), dl.LayerGroup(id='layer'), colorbar], style={'width': '1000px', 'height': '500px'}, id="the_map")]),
+    html.Div([dl.Map([dl.TileLayer(), dl.LayerGroup(id='layer'), colorbar], style={'width': '1000px', 'height': '500px', 'zoom_control': 'false'}, id="the_map")]),
     html.Div(id='blurs', style={'display': 'none'}),
     html.Div(id='dd-output-container', style={'display': 'none'}),
     html.Div([
             dbc.Row([
-                dbc.Col(html.Div(),width=4),
                 dbc.Col(html.Div(
                     dbc.Nav([dbc.NavLink("github", href="www.github.com/saltzadam/WheelWay"),
                         dbc.NavLink("slides", href="#")
                         ])
-                    ),width=4)
+                    ),width=4),
+                dbc.Col(html.Div(),width=4)
              ], justify="between")
         ])
     ])
@@ -81,63 +87,53 @@ app.layout = html.Div([
         Output('blurs', 'children'),
         [Input('origin', 'n_blur'),
          Input('dest', 'n_blur'),
-         Input('slope_button', 'n_clicks'),
-         Input('balance_button', 'n_clicks'),
-         Input('short_button', 'n_clicks')])
-def update_blurs(blur_o, blur_d, b1, b2, b3):
+         Input('routing', 'value')])
+def update_blurs(blur_o, blur_d, routing):
+    if routing == 'slope':
+        c = 0
+    elif routing == 'balance':
+        c = 1
+    else:
+        c = 2 
     if (not blur_o) or (not blur_d):
         return 0
     else:
-        return int(blur_o) + int(blur_d) + b1 + b2 + b3
+        return int(blur_o) + int(blur_d) + c
 
 @app.callback(
         Output('dd-output-container', 'children'),
-        [Input('slope_button', 'n_clicks'),
-         Input('balance_button', 'n_clicks'),
-         Input('short_button', 'n_clicks')],
+        [Input('routing','value')],
         )
-def update_dd(b1, b2, b3):
-    ctx = dash.callback_context
-    state = ctx.triggered[0]['prop_id']
-    if state == "slope_button.n_clicks":
-        return 'slope'
-    elif state == "balance_button.n_clicks":
-        return 'balance'
-    elif state == "short_button.n_clicks":
-        return 'short'
+def update_dd(routing):
+    return(routing)
+
+@app.callback(
+        Output('slider-display', 'style'),
+        [Input('dd-output-container', 'children')]
+        )
+def show_slider(routing):
+    if routing == 'balance':
+        return {}
     else:
-        return 'slope'
-   
+        return {'display':'none'}
+
 @app.callback(
     [ Output('warning', 'children'),
       Output('layer', 'children'),
       Output('the_map','bounds')],
-    [Input('blurs', 'children')],# Input('dest', 'value')],
+    [Input('blurs', 'children'),
+     Input('alpha', 'value'), # Input('dest', 'value'),
+     Input('routing', 'value')],
     [State('origin', 'value'),
-     State('dest', 'value'),
-     State('dd-output-container', 'children')
+     State('dest', 'value')
+     # State('dd-output-container', 'children')
     ]
     )
-def update_figure(nb, ori_str, dest_str, routing):
-    if (not ori_str) or (not dest_str):
+def update_figure(nb, alpha, routing, ori_str, dest_str):
+    if (not ori_str) or (not dest_str) or (routing not in ['slope','balance','short']):
         return [], 'Enter your origin and destination!', utils.STANDARD_BOUNDS 
     else:
-        return utils.get_fig(ori_str, dest_str, routing)
-
-@app.callback([Output('slope_button', 'active'),
-               Output('balance_button', 'active'),
-               Output('short_button', 'active')],
-               [Input('dd-output-container', 'children')]
-               )
-def update_active(routing):
-    if routing == 'slope':
-        return [True, False, False]
-    elif routing == 'balance':
-        return [False, True, False]
-    elif routing == 'short':
-        return [False, False, True]
-    else: 
-        return [True, False, False]
+        return utils.get_fig(ori_str, dest_str, routing, alpha)
 
 
 
