@@ -186,8 +186,11 @@ def get_route(ori_str, des_str,routing,con):
     return route_message
 
 def make_line(row):
-    source, target, angleclasss = row
-    color = angle_color_map[angleclasss]
+    source, target, angleclasss, key = row
+    if key == 1:
+        color = 'red'
+    else:
+        color = angle_color_map[angleclasss]
     return dl.Polyline(positions=[[source[1], source[0]], [target[1], target[0]]], color=color, weight= 4)
 
 def make_lines(route):
