@@ -64,7 +64,18 @@ app.layout = html.Div([
     html.Div(id='a_string', children=""),
     html.Div([dl.Map([dl.TileLayer(), dl.LayerGroup(id='layer'), colorbar], style={'width': '1000px', 'height': '500px'}, id="the_map")]),
     html.Div(id='blurs', style={'display': 'none'}),
-    html.Div(id='dd-output-container', style={'display': 'none'})])
+    html.Div(id='dd-output-container', style={'display': 'none'}),
+    html.Div([
+            dbc.Row([
+                dbc.Col(html.Div(),width=4),
+                dbc.Col(html.Div(
+                    dbc.Nav([dbc.NavLink("github", href="www.github.com/saltzadam/WheelWay"),
+                        dbc.NavLink("slides", href="#")
+                        ])
+                    ),width=4)
+             ], justify="between")
+        ])
+    ])
 
 @app.callback(
         Output('blurs', 'children'),

@@ -103,17 +103,21 @@ slope_sql_query = """SELECT st_astext(st_startpoint(b.geom)), st_astext(st_endpo
 
 ALPHA = 2/5
 
-def stream_route(ori_int, des_int, routing, cur):
+def stream_route(ori_int, des_int, routing, con):
     if routing == 'short':
+        cur = con.cursor('short')
         cur.execute(short_sql_query, (ori_int, des_int))
     elif routing == 'balance':
+        cur = con.cursor('balance')
         cur.execute(balance_sql_query, (ALPHA, ALPHA, ori_int, des_int))
     elif routing == 'slope':
         for i in range(32):
+            cur = con.cursor()
             cur.execute(slope_sql_query, (i, i, ori_int, des_int))
             if i == 31:
                 return None
             if cur.fetchone() is not None:
+                cur = con.cursor('balance')
                 cur.execute(slope_sql_query, (i, i, ori_int, des_int))
                 max_slope = i
             else:
@@ -176,12 +180,12 @@ def get_route(ori_str, des_str,routing,con):
     g2 = geocoder.osm(des_str + " Brighton, MA")
     p1 = (g1.json['lng'], g1.json['lat'])
     p2 = (g2.json['lng'], g2.json['lat'])
-    cur = con.cursor("cursorname")
+    cur = con.cursor()
     n1 = get_nearest_node(p1[0], p1[1], cur)
     n2 = get_nearest_node(p2[0], p2[1], cur)
-    # this returns a list (lng, lat, class)
-    route_message = stream_route(n1, n2, routing, cur)
     cur.close()
+    # this returns a list (lng, lat, class)
+    route_message = stream_route(n1, n2, routing, con)
     # returns a list of tuples [(lng, lat)]
     return route_message
 
