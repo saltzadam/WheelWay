@@ -55,10 +55,12 @@ def snap_endpoints(linestring, geom, tol):
     #return LineString([Point(p0)] + list(map(Point, linelist[1:-1])) + [Point(pn)])
     return LineString([Point(p0), Point(p1)])
 
+   
+
 def round_pt(pt):
     a, b = pt
-    a = round(a,1)
-    b = round(b,1)
+    a = round(a)
+    b = round(b)
     return Point(a,b)
 
 def round_edge(edge):
@@ -104,7 +106,7 @@ def get_nearest_crosswalk_nodes(G, point, method="haversine", return_dist=False)
     else:
         raise ValueError('method argument must be either "haversine" or "euclidean"')
     
-    some_best = df.nsmallest(n=10,columns=['dists']).iloc[1:]
+    some_best = df.nsmallest(n=17,columns=['dists']).iloc[1:]
 
     vertices = []
     for _, row in some_best.iterrows():
@@ -113,10 +115,7 @@ def get_nearest_crosswalk_nodes(G, point, method="haversine", return_dist=False)
         reachables = [nx.has_path(G, int(row.id), int(vx.id)) for vx in vertices ]
         if any(reachables):
             continue
-        distances = [great_circle_vec(lat1=row.y, lng1=row.x, lat2=vx.y, lng2=vx.x) for vx in vertices]
-        
-        if all([dist < 4 for dist in distances]):
-            vertices.append(row)
+        vertices.append(row)
 
     # if caller requested return_dist, return distance between the point and the
     # nearest node as well
@@ -126,12 +125,12 @@ from shapely.geometry import LineString
 from math import sqrt
 def get_nearest_cw_node_pairs(G, pt):
     pts = get_nearest_crosswalk_nodes(G,pt)
-    all_cws = [(u,v) for u in pts for v in pts if u['id'] < v['id']]
+    all_cws = [(u,v) for u in pts for v in pts if u['id'] != v['id']]
     good_cws = sorted(all_cws, key = lambda pair : great_circle_vec(lat1=pair[0].x, lng1=pair[0].y, 
                                                              lat2=pair[1].x, lng2=pair[1].y))
     
-    K = len(all_cws)
-    num_to_return = int((1 + sqrt(1 + 8*K))/2)
+    K = len(all_cws)/2
+    num_to_return = 2 * int((1 + sqrt(1 + 8*K))/2)
     return good_cws[0:num_to_return]
     
 def make_edge(pair):
@@ -144,8 +143,8 @@ def make_edge(pair):
         'geometry': LineString([[u_node.y, u_node.x], [v_node.y, v_node.x]]),
         'length_m': great_circle_vec(lat1=u_node.x, lng1=u_node.y, lat2=v_node.x, lng2=v_node.y),
         'angle_deg': 0,
-        'osmid': int(u_node.id) * int(v_node.id),
-        'angle_class': 0,
+        'osmid': (int(u_node.id) + 1) * (int(v_node.id) + 1),
+        'angleclass': 0,
         'key': 1
     }
     return (u,v,data_dict)    

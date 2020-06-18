@@ -10,7 +10,7 @@ from geoalchemy2 import WKTElement, Geometry
 import geopandas as gpd
 
 
-hostname = "wheelway2.cgfv5tiyps6x.us-east-1.rds.amazonaws.com"
+hostname = "wheelway4.cgfv5tiyps6x.us-east-1.rds.amazonaws.com"
 username = "postgres"
 with open('/home/adam/rdskey') as keyfile:
     rds_key = keyfile.readline().strip()
@@ -40,17 +40,19 @@ gdf_edges.rename(columns = {'u':'source',
                  'length_m':'cost'}, inplace=True)
 
 from sqlalchemy import Integer, Float, BigInteger
+gdf_edges['id'] = gdf_edges['osmid']
 with engine.connect() as connection:
-    gdf_edges.to_sql('my_edges', connection, if_exists='replace', index=False, method='multi', chunksize=1000,
+    gdf_edges.to_sql('my_edges', connection, if_exists='replace', index=False, method='multi', chunksize=5000,
                      dtype={'geom': Geometry('LINESTRING', srid=4326),
                                     'angle_class': Integer,
                                     'balanced_l': Float,
+                                    'key': Integer,
                                     'cost': Float,
+                                    'id': Integer,
+                                    'obstructed': Integer,
                                     'osmid': Integer,
                                     'source': Integer,
                                     'target': Integer},
                     )
-    connection.execute("SELECT pgr_createTopology('my_edges', 0.000005)")
-
 
 

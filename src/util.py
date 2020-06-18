@@ -54,5 +54,5 @@ def list_explode(gdf):
             old_rows.append(i)
         rows.extend(new_rows)
     new_gdf = gpd.GeoDataFrame(rows).reset_index(drop=True)
-    new_gdf.crs = "EPSG:26919"
+    new_gdf.crs = gdf.crs
     return new_gdf

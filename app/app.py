@@ -6,13 +6,15 @@ from dash.dependencies import Input, Output, State
 import dash_leaflet as dl
 from dash_leaflet import express as dlx
 
+import dash_bootstrap_components as dbc
 #import app.utils as utils
-import app.utils as utils
+try:
+    import app.utils as utils
+except:
+    import utils
 
-import plotly_express as px
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
+#import plotly_express as px
 
-# just write out rgb and maybe don't need plotly import
 angle_color_map = {
         0: "#8dd544ff",
         1: "#35b479ff",
@@ -27,7 +29,7 @@ marks = ["Low slope", "", "", "", "High slope"]
 colorscale = list(angle_color_map.values())[0:5]
 colorbar = dlx.categorical_colorbar(categories=marks, colorscale=colorscale, width=300, height=30, position="bottomleft")
 
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
 server = app.server
 styles = {
@@ -40,20 +42,24 @@ styles = {
 app.layout = html.Div([
     dcc.Markdown("""
     # WheelWay
-    ### Directions for people with mobility impairments
+    ### Directions for everybody
     """),
-    dcc.Markdown("Origin:"),
-    dcc.Input(id='origin', value='', type='text', debounce=True),
-    dcc.Markdown("Destination:"),
-    html.Div(id='container', children = [dcc.Input(id='dest', value='', type='text', debounce=True),
-        dcc.Dropdown(id='routing',
-            options = [
-                {'label': 'Find an "ADA accessible" route.', 'value': 'ADA'},
-                {'label': "Minimize the worst slope I'll see.", 'value': 'slope'},
-                {'label': "Balance length and steepness", 'value': 'balance'},
-                {'label': 'Just show me the shortest route', 'value': 'short'}],
-            value='ADA',
-            style={'width': '400px'})]),
+    dbc.Col(html.Div([
+        dcc.Markdown("Enter any street address in Brighton -- no need to add the city or state!"),
+        # dcc.Markdown("Origin:"),
+        dbc.Input(id='origin', placeholder="Type your origin here", value='', type='text', debounce=True, bs_size="lg"),
+        # dcc.Markdown("Destination:"),
+        dbc.Input(id='dest', placeholder="Type your destination here", value='', type='text', debounce=True, bs_size="lg"),
+        html.Hr(),
+    ]), width=6),
+    html.Div([
+        dbc.Nav([
+                dbc.NavLink("Minimize slope", id='slope_button', n_clicks=0, href="#"),
+                dbc.NavLink("Balance slope and length", id='balance_button', n_clicks=0, href="#"),
+                dbc.NavLink("Shortest route", id='short_button', n_clicks=0, href="#")
+                ],
+            pills=True)
+        ]),
     html.Div(id='warning'),
     html.Div(id='a_string', children=""),
     html.Div([dl.Map([dl.TileLayer(), dl.LayerGroup(id='layer'), colorbar], style={'width': '1000px', 'height': '500px'}, id="the_map")]),
@@ -64,28 +70,33 @@ app.layout = html.Div([
         Output('blurs', 'children'),
         [Input('origin', 'n_blur'),
          Input('dest', 'n_blur'),
-         Input('routing', 'value')])
-def update_blurs(blur_o, blur_d,routing):
+         Input('slope_button', 'n_clicks'),
+         Input('balance_button', 'n_clicks'),
+         Input('short_button', 'n_clicks')])
+def update_blurs(blur_o, blur_d, b1, b2, b3):
     if (not blur_o) or (not blur_d):
         return 0
     else:
-        if routing=='ADA':
-            num = 0
-        elif routing=='slope':
-            num = 1
-        elif routing=='balance':
-            num = 2
-        else:
-            num = 3
-
-        return int(blur_o) + int(blur_d) + num
+        return int(blur_o) + int(blur_d) + b1 + b2 + b3
 
 @app.callback(
         Output('dd-output-container', 'children'),
-        [Input('routing', 'value')])
-def update_dd(value):
-    return value
-
+        [Input('slope_button', 'n_clicks'),
+         Input('balance_button', 'n_clicks'),
+         Input('short_button', 'n_clicks')],
+        )
+def update_dd(b1, b2, b3):
+    ctx = dash.callback_context
+    state = ctx.triggered[0]['prop_id']
+    if state == "slope_button.n_clicks":
+        return 'slope'
+    elif state == "balance_button.n_clicks":
+        return 'balance'
+    elif state == "short_button.n_clicks":
+        return 'short'
+    else:
+        return 'slope'
+   
 @app.callback(
     [ Output('warning', 'children'),
       Output('layer', 'children'),
@@ -93,13 +104,31 @@ def update_dd(value):
     [Input('blurs', 'children')],# Input('dest', 'value')],
     [State('origin', 'value'),
      State('dest', 'value'),
-     State('routing', 'value')]
+     State('dd-output-container', 'children')
+    ]
     )
 def update_figure(nb, ori_str, dest_str, routing):
     if (not ori_str) or (not dest_str):
         return [], 'Enter your origin and destination!', utils.STANDARD_BOUNDS 
     else:
         return utils.get_fig(ori_str, dest_str, routing)
+
+@app.callback([Output('slope_button', 'active'),
+               Output('balance_button', 'active'),
+               Output('short_button', 'active')],
+               [Input('dd-output-container', 'children')]
+               )
+def update_active(routing):
+    if routing == 'slope':
+        return [True, False, False]
+    elif routing == 'balance':
+        return [False, True, False]
+    elif routing == 'short':
+        return [False, False, True]
+    else: 
+        return [True, False, False]
+
+
 
 if __name__ == '__main__':
     app.run_server(debug=True,
