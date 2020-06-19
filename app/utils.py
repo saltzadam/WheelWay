@@ -52,6 +52,8 @@ def process_row(row):
 
 FOUND_ROUTE_MESSAGE = "Here's your route."
 
+# TODO: rewrite with sqlalchemy, please
+# also parametrize
 short_sql_query = """SELECT ST_AsText(ST_StartPoint(b.geom)), ST_AsText(ST_EndPoint(b.geom)), b.angle_deg, b.key, b.obstructed
                        FROM pgr_dijkstra('SELECT id, source, target, cost, cost AS reverse_cost FROM my_edges 
                        ', %s, %s, FALSE) a 
@@ -64,7 +66,7 @@ short_sql_query_obs = """SELECT ST_AsText(ST_StartPoint(b.geom)), ST_AsText(ST_E
                        LEFT JOIN my_edges b 
                        ON (a.edge = b.id)"""
 balance_sql_query = """SELECT ST_AsText(ST_StartPoint(b.geom)), ST_AsText(ST_EndPoint(b.geom)), b.angle_deg, b.key, b.obstructed
-                       FROM pgr_dijkstra('SELECT id, source, target, (cost * (1 + %s * abs(angle_deg)/15)) AS cost, (cost * (1 + %s * abs(angle_deg)/15)) AS reverse_cost FROM my_edges', %s, %s, FALSE) a 
+                       FROM pgr_dijkstra('SELECT id, source, target, POWER(cost * (1 + %s * abs(angle_deg)/15), 2) AS cost, (cost * POWER(1 + %s * abs(angle_deg)/15, 2)) AS reverse_cost FROM my_edges', %s, %s, FALSE) a 
                        LEFT JOIN my_edges b 
                        ON (a.edge = b.id)""" # (ALPHA, ALPHA, ori_int, des_int)
                        # ALPHA = 2/5
