@@ -24,7 +24,7 @@ angle_color_map = {
         None: 'blue'}
 
 
-marks = ["0&deg-3&deg", "3&deg-6&deg", "6&deg-9&deg", "9&deg-12&deg", "12&deg+"]
+marks = ["0&deg-4&deg", "4&deg-8&deg", "8&deg-12&deg", "12&deg-16&deg", "16&deg+"]
 # marks = ["Low slope", "", "", "", "High slope"]
 colorscale = list(angle_color_map.values())[0:5]
 colorbar = dlx.categorical_colorbar(categories=marks, colorscale=colorscale, width=300, height=30, position="bottomleft", style={'font-size':'14pt', 'background-color':'lightgrey'})

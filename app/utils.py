@@ -210,13 +210,13 @@ def get_route(ori_str, des_str,routing, alpha, obs, con):
 def make_line(row):
     # print(row)
     points, angle_deg, key, obstruct = row
-    if abs(angle_deg) < 3:
+    if abs(angle_deg) < 4:
         angleclass=0
-    elif abs(angle_deg) < 6:
+    elif abs(angle_deg) < 8:
         angleclass=1
-    elif abs(angle_deg) < 9:
-        angleclass=2
     elif abs(angle_deg) < 12:
+        angleclass=2
+    elif abs(angle_deg) < 16:
         angleclass=3
     else:
         angleclass=4
