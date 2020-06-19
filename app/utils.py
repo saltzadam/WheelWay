@@ -52,43 +52,82 @@ def process_row(row):
 
 FOUND_ROUTE_MESSAGE = "Here's your route."
 
-short_sql_query = """SELECT ST_AsText(ST_StartPoint(b.geom)), ST_AsText(ST_EndPoint(b.geom)), b.angleclass, b.key, b.obstructed
+short_sql_query = """SELECT ST_AsText(ST_StartPoint(b.geom)), ST_AsText(ST_EndPoint(b.geom)), b.angle_deg, b.key, b.obstructed
                        FROM pgr_dijkstra('SELECT id, source, target, cost, cost AS reverse_cost FROM my_edges 
                        ', %s, %s, FALSE) a 
                        LEFT JOIN my_edges b 
                        ON (a.edge = b.id)""" # (ori_int, des_int)
                        #WHERE obstructed=0
-balance_sql_query = """SELECT ST_AsText(ST_StartPoint(b.geom)), ST_AsText(ST_EndPoint(b.geom)), b.angleclass, b.key, b.obstructed
+short_sql_query_obs = """SELECT ST_AsText(ST_StartPoint(b.geom)), ST_AsText(ST_EndPoint(b.geom)), b.angle_deg, b.key, b.obstructed
+                       FROM pgr_dijkstra('SELECT id, source, target, cost, cost AS reverse_cost FROM my_edges WHERE obstructed=0 
+                       ', %s, %s, FALSE) a 
+                       LEFT JOIN my_edges b 
+                       ON (a.edge = b.id)"""
+balance_sql_query = """SELECT ST_AsText(ST_StartPoint(b.geom)), ST_AsText(ST_EndPoint(b.geom)), b.angle_deg, b.key, b.obstructed
                        FROM pgr_dijkstra('SELECT id, source, target, (cost * (1 + %s * abs(angle_deg)/15)) AS cost, (cost * (1 + %s * abs(angle_deg)/15)) AS reverse_cost FROM my_edges', %s, %s, FALSE) a 
                        LEFT JOIN my_edges b 
                        ON (a.edge = b.id)""" # (ALPHA, ALPHA, ori_int, des_int)
                        # ALPHA = 2/5
-slope_sql_query = """SELECT st_astext(st_startpoint(b.geom)), st_astext(st_endpoint(b.geom)), b.angleclass, b.key, b.obstructed
+balance_sql_query_obs = """SELECT ST_AsText(ST_StartPoint(b.geom)), ST_AsText(ST_EndPoint(b.geom)), b.angle_deg, b.key, b.obstructed
+                       FROM pgr_dijkstra('SELECT id, source, target, (cost * (1 + %s * abs(angle_deg)/15)) AS cost, (cost * (1 + %s * abs(angle_deg)/15)) AS reverse_cost FROM my_edges WHERE obstructed=0', %s, %s, FALSE) a 
+                       LEFT JOIN my_edges b 
+                       ON (a.edge = b.id)""" # (ALPHA, ALPHA, ori_int, des_int)
+slope_sql_query = """SELECT st_astext(st_startpoint(b.geom)), st_astext(st_endpoint(b.geom)), b.angle_deg, b.key, b.obstructed
                            FROM pgr_dijkstra('SELECT id, source, target, cost, cost AS reverse_cost
                                               FROM my_edges 
                                               WHERE angle_deg < %s AND angle_deg > -(%s)', %s, %s, FALSE) a 
                            LEFT JOIN my_edges b 
                            ON (a.edge = b.id)""" # (i, i, ori_int, des_int))
+slope_sql_query_obs = """SELECT st_astext(st_startpoint(b.geom)), st_astext(st_endpoint(b.geom)), b.angle_deg, b.key, b.obstructed
+                           FROM pgr_dijkstra('SELECT id, source, target, cost, cost AS reverse_cost
+                                              FROM my_edges
+                                              WHERE angle_deg < %s AND angle_deg > -(%s) AND obstructed=0', %s, %s, FALSE) a 
+                           LEFT JOIN my_edges b 
+                           ON (a.edge = b.id)""" # (i, i, ori_int, des_int))
+
 
 ALPHA = 2/5
 
-def stream_route(ori_int, des_int, routing, alpha, con):
+def stream_route(ori_int, des_int, routing, alpha, obs, con):
     print(routing)
-    if routing == 'short':
+    # TODO: this should all be dicts or whatever
+    # actually should make the queries functions of obs, c'mon
+    if routing == 'short' and obs:
+        cur = con.cursor('short')
+        cur.execute(short_sql_query_obs, (ori_int, des_int))
+    elif routing == 'short' and not obs:
         cur = con.cursor('short')
         cur.execute(short_sql_query, (ori_int, des_int))
-    elif routing == 'balance':
+    elif routing == 'balance' and obs:
+        cur = con.cursor('balance')
+        cur.execute(balance_sql_query_obs, (alpha, alpha, ori_int, des_int))
+    elif routing == 'balance' and not obs:
         cur = con.cursor('balance')
         cur.execute(balance_sql_query, (alpha, alpha, ori_int, des_int))
-    elif routing == 'slope':
+    elif routing == 'slope' and not obs:
         for i in range(0, 39, 2):
             cur = con.cursor()
+            
             cur.execute(slope_sql_query, (i, i, ori_int, des_int))
             if i >= 38:
                 return [], "I'm sorry, we can't find a route without very high slopes."
             if cur.fetchone() is not None:
                 cur = con.cursor()
                 cur.execute(slope_sql_query, (i, i, ori_int, des_int))
+                max_slope = i
+                break
+            else:
+                continue
+    elif routing == 'slope' and obs:
+        for i in range(0, 39, 2):
+            cur = con.cursor()
+            
+            cur.execute(slope_sql_query_obs, (i, i, ori_int, des_int))
+            if i >= 38:
+                return [], "I'm sorry, we can't find a route without very high slopes."
+            if cur.fetchone() is not None:
+                cur = con.cursor()
+                cur.execute(slope_sql_query_obs, (i, i, ori_int, des_int))
                 max_slope = i
                 break
             else:
@@ -148,9 +187,13 @@ def stream_route(ori_int, des_int, routing, alpha, con):
         return relinked, "This route has a maximum slope of " + str(max_slope) + " degrees."
     else:
         cur.close()
-        return relinked, "Here's your route."
+        if obs:
+            SUCCESS_STRING = "Here's your route with no sidewalk problems."
+        else:
+            SUCCESS_STRING = "Here's your route."
+        return relinked, SUCCESS_STRING
 
-def get_route(ori_str, des_str,routing, alpha, con):
+def get_route(ori_str, des_str,routing, alpha, obs, con):
     g1 = geocoder.osm(ori_str + " Brighton, MA")
     g2 = geocoder.osm(des_str + " Brighton, MA")
     p1 = (g1.json['lng'], g1.json['lat'])
@@ -160,13 +203,23 @@ def get_route(ori_str, des_str,routing, alpha, con):
     n2 = get_nearest_node(p2[0], p2[1], cur)
     cur.close()
     # this returns a list (lng, lat, class)
-    route_message = stream_route(n1, n2, routing, alpha, con)
+    route_message = stream_route(n1, n2, routing, alpha, obs, con)
     # returns a list of tuples [(lng, lat)]
     return route_message
 
 def make_line(row):
     # print(row)
-    points, angleclasss, key, obstruct = row
+    points, angle_deg, key, obstruct = row
+    if abs(angle_deg) < 3:
+        angleclass=0
+    elif abs(angle_deg) < 6:
+        angleclass=1
+    elif abs(angle_deg) < 9:
+        angleclass=2
+    elif abs(angle_deg) < 12:
+        angleclass=3
+    else:
+        angleclass=4
     points = [[point[1], point[0]] for point in points]
     # print(points)
     if key == 1:
@@ -174,7 +227,7 @@ def make_line(row):
     elif obstruct == 1:
         color = 'red'
     else:
-        color = angle_color_map[angleclasss]
+        color = angle_color_map[angleclass]
     return dl.Polyline(positions=points, color=color, weight= 4)
 
 def make_lines(route):
@@ -216,7 +269,7 @@ def get_bounds(lines):
 
 STANDARD_BOUNDS = [[42.331, -71.17], [42.36, -71.13405]]
 
-def get_fig(ori_str, des_str, routing, alpha):
+def get_fig(ori_str, des_str, routing, alpha, obs):
     con = psycopg2.connect(database = "wheelway", 
                        user=username, 
                        host=hostname, 
@@ -224,7 +277,7 @@ def get_fig(ori_str, des_str, routing, alpha):
                        port=5432
                       )
 
-    route, message = get_route(ori_str, des_str, routing, alpha, con)
+    route, message = get_route(ori_str, des_str, routing, alpha, obs, con)
     if route is None or route == []:
         return message, [], STANDARD_BOUNDS # should be some standard bounds maybe
     lines = make_lines(route)
