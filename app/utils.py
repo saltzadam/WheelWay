@@ -280,6 +280,7 @@ def get_fig(ori_str, des_str, routing, alpha, obs):
                       )
 
     route, message = get_route(ori_str, des_str, routing, alpha, obs, con)
+    print(route)
     if route is None or route == []:
         return message, [], STANDARD_BOUNDS # should be some standard bounds maybe
     lines = make_lines(route)

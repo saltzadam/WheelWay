@@ -40,36 +40,36 @@ styles = {
 }
 
 app.layout = html.Div([
-    dcc.Markdown("""
-    # WheelWay
-    ### Directions for everybody
-    """),
+    dbc.Col(
+        dcc.Markdown("""
+        # WheelWay
+        ### Directions for everybody
+        """)),
     dbc.Col(html.Div([
-        dbc.Row([dcc.Markdown("Enter any street address in Brighton -- no need to add the city or state!")]),
-        # dcc.Markdown("Origin:"),
+        dcc.Markdown("Enter any street address in Brighton -- no need to add the city or state!"),
         dbc.Row([dbc.Col([dbc.Input(id='origin', placeholder="Type your origin here", value='', type='text', debounce=True, bs_size="lg")], width=6)
             ]),
-        # dcc.Markdown("Destination:"),
         dbc.Row([
-            dbc.Col([dbc.Input(id='dest', placeholder="Type your destination here", value='', type='text', debounce=True, bs_size="lg")]), 
-            dbc.Col([dbc.Button(children = "Find me a route with no obstructions", color="success", id='obs_button', n_clicks=0)])
+            dbc.Col([html.Div([dbc.Input(id='dest', placeholder="Type your destination here", value='', type='text', debounce=True, bs_size="lg")], style={'padding-top':'5px', 'padding-bottom':'5px'})]), 
+            dbc.Col([html.Div([dbc.Button(children = "Find me a route with no obstructions", color="success", id='obs_button', n_clicks=0)], style={'padding-top':'5px'})])
             ]),
-    ]), width='auto'),
-    dbc.Row([
-    dbc.Col([
+    ]), width='auto', align='start'),
+    dbc.Col([dbc.Row([
+    dbc.Col([html.Div([
         dcc.Dropdown(id="routing", 
-                     value="Find me a route!", 
+                     placeholder="Find the route with...", 
                      options = [
-                         {"label": "Minimize slope", "value": 'slope'},
-                         {"label": "Balance slope and length", "value":'balance'},
-                         {"label": "Shortest route", 'value': 'short'}
+                         {"label": "Lowest slope", "value": 'slope'},
+                         {"label": "Balanced slope and length", "value":'balance'},
+                         {"label": "Shortest length", 'value': 'short'}
                          ], style={'width': '800px'}),
-                     ], width='auto'),
+                     ], style={'padding_top':'5px', 'padding-bottom':'5px', 'font-size':'16pt'})]),# width='4'),
     dbc.Col(html.Div([
         dcc.Slider(id='alpha', min = .4, max = 20.4, step = 1, value=.4,
             marks={.4: {'label': "I don't mind some hills", 'style': {'font-size':'12pt', 'color':'blue'}}, 20.4: {'label': "I hate hills!", 'style': {'font-size':'12pt', 'color':'red'}}})
         ], style={'display':'none'}, id='slider-display'), width=4)
-    ]),
+    ])]),
+    dbc.Col([
     html.Div(id='warning'),
     html.Div(id='a_string', children=""),
     html.Div([dl.Map([dl.TileLayer(), dl.LayerGroup(id='layer'), colorbar], style={'width': '1000px', 'height': '500px'}, zoomControl=False, id="the_map")]),
@@ -85,7 +85,7 @@ app.layout = html.Div([
                 dbc.Col(html.Div(),width=4)
              ], justify="between")
         ])
-    ])
+    ])])
 
 @app.callback(
         [Output('obs_button', 'color'),
