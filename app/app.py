@@ -25,13 +25,20 @@ ANGLE_COLOR_MAP = utils.ANGLE_COLOR_MAP #{
 #         }
 
 
-MARKS = ["0&deg-4&deg", "4&deg-8&deg", "8&deg-12&deg", "12&deg-16&deg", "16&deg+"]
-COLORSCALE = list(ANGLE_COLOR_MAP.values())[0:5]
+MARKS = ["0&deg - 4&deg", "4&deg - 8&deg", "8&deg - 12&deg", "12&deg - 16&deg", "16&deg+", "Crosswalk", "Blocked"]
+COLORSCALE = list(ANGLE_COLOR_MAP.values())[0:5] + ['yellow', 'red']
 COLORBAR = dlx.categorical_colorbar(
         categories=MARKS, colorscale=COLORSCALE, 
-        width=300, height=30, position="bottomleft", 
-        style={'font-size':'14pt', 'background-color':'lightgrey'}
+        width=520, height=30, position="bottomleft", 
+        style={'font-size':'12pt', 'background-color':'lightgrey'}
         )
+
+# COLORBAR2 = dlx.categorical_colorbar(
+#         categories=[ "Crosswalk", "Blocked"],
+#         colorscale=['yellow', 'red'],
+#         width = 150, height = 30, position="bottomright",
+#         style={'font-size':'12pt', 'background-color':'lightgrey'}
+#         )
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
@@ -85,7 +92,7 @@ app.layout = html.Div([
             dbc.Col(
                 html.Div([
                     dcc.Slider(id='alpha', min = .4, max = 20.4, step = 1, value=.4,
-                        MARKS={
+                        marks={
                             .4: {'label': "I don't mind some hills", 
                                 'style': {'font-size':'12pt', 'color':'blue'}}, 
                             20.4: {'label': "I hate hills!", 'style': {'font-size':'12pt', 'color':'red'}}

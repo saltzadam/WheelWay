@@ -41,7 +41,7 @@ gdf_edges.rename(columns = {'u':'source',
                  'length_m':'cost'}, inplace=True)
 
 from sqlalchemy import Integer, Float, BigInteger
-gdf_edges['id'] = gdf_edges['osmid']
+# gdf_edges['id'] = gdf_edges['osmid']
 with engine.connect() as connection:
     gdf_edges.to_sql('my_edges', connection, if_exists='replace', index=False, method='multi', chunksize=5000,
                      dtype={'geom': Geometry('LINESTRING', srid=4326),

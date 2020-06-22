@@ -9,11 +9,11 @@ import dash_leaflet as dl
 import os
 
 ANGLE_COLOR_MAP = {
-        4: "#45337dff",
-        3: "#33638dff",
-        2: "#218f8dff",
-        1: "#35b479ff",
         0: "#8dd544ff",
+        1: "#35b479ff",
+        2: "#218f8dff",
+        3: "#33638dff",
+        4: "#45337dff",
         None: 'blue'}
 
 
@@ -47,6 +47,8 @@ def get_nearest_node(lng, lat, cur):
 
 # converts 'POINT (coord, coord)' to (coord, coord)
 def pt_to_pair(ptstring):
+
+    print(ptstring)
     pt = loads(ptstring) # From shapely. Takes a WKT string
                          # and returns a shapely.geometry.Point.
     return pt.coords[0]  # We only want (coord, coord)
@@ -143,6 +145,7 @@ def stream_route(ori_int, des_int, routing, alpha, obs, con):
                 break
             else:
                 continue
+
     try:
         first_row = process_row(cur.fetchone())
     except StopIteration:
