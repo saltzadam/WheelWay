@@ -5,14 +5,10 @@ import sqlalchemy as sql
 from  shapely.wkt import loads
 import shapely
 import dash_leaflet as dl
-import plotly_express as px
 
 import os
 
-# controls angle scaling for balanced paths
-ALPHA = 2/5
-
-angle_color_map = {
+ANGLE_COLOR_MAP = {
         4: "#45337dff",
         3: "#33638dff",
         2: "#218f8dff",
@@ -21,35 +17,47 @@ angle_color_map = {
         None: 'blue'}
 
 
+# you should fill in your own database here
 hostname = "wheelway4.cgfv5tiyps6x.us-east-1.rds.amazonaws.com"
 username = "postgres"
-#with open('rdskey') as keyfile:
-#    rds_key = keyfile.readline().strip()
+
+# Import your password
+# This is for the user 'postgres' in your database, not for AWS
+
 try:
+    # load key in Heroku
     rds_key = os.environ['RDS_KEY']
 except:
     with open('/home/adam/rdskey') as keyfile:
         rds_key = keyfile.readline().strip()
 
+# TODO: error handling!
 def get_nearest_node(lng, lat, cur):
+    # search the edges, ordered by distance from (lng, lat)
+    # LIMIT 1 returns the first, i.e the closest
     cur.execute("""
     SELECT source, geom <-> ST_SetSRID(ST_MakePoint(%s, %s), 4326) AS dist 
     FROM my_edges
     ORDER BY dist LIMIT 1;""", (lng, lat))
     raw = cur.fetchall()
-    ID = raw[0][0]
+    ID = raw[0][0] # throw out the distance
+    # This is a nice, lightweight debugger
     print(ID)
     return ID
 
 # converts 'POINT (coord, coord)' to (coord, coord)
 def pt_to_pair(ptstring):
-    pt = loads(ptstring) # from shapely
-    return pt.coords[0]
+    pt = loads(ptstring) # From shapely. Takes a WKT string
+                         # and returns a shapely.geometry.Point.
+    return pt.coords[0]  # We only want (coord, coord)
+                         # TODO: clearer as [:]
 
 def process_row(row):
     return ([pt_to_pair(row[0]), pt_to_pair(row[1])], row[2], row[3], row[4])
  
 
+# TODO: parametrize this over slopes for the 'slope' search.
+#       the others could be defaults
 FOUND_ROUTE_MESSAGE = "Here's your route."
 
 # TODO: rewrite with sqlalchemy, please
@@ -59,27 +67,30 @@ short_sql_query = """SELECT ST_AsText(ST_StartPoint(b.geom)), ST_AsText(ST_EndPo
                        ', %s, %s, FALSE) a 
                        LEFT JOIN my_edges b 
                        ON (a.edge = b.id)""" # (ori_int, des_int)
-                       #WHERE obstructed=0
+
 short_sql_query_obs = """SELECT ST_AsText(ST_StartPoint(b.geom)), ST_AsText(ST_EndPoint(b.geom)), b.angle_deg, b.key, b.obstructed
                        FROM pgr_dijkstra('SELECT id, source, target, cost, cost AS reverse_cost FROM my_edges WHERE obstructed=0 
                        ', %s, %s, FALSE) a 
                        LEFT JOIN my_edges b 
                        ON (a.edge = b.id)"""
+
 balance_sql_query = """SELECT ST_AsText(ST_StartPoint(b.geom)), ST_AsText(ST_EndPoint(b.geom)), b.angle_deg, b.key, b.obstructed
                        FROM pgr_dijkstra('SELECT id, source, target, POWER(cost * (1 + %s * abs(angle_deg)/15), 2) AS cost, (cost * POWER(1 + %s * abs(angle_deg)/15, 2)) AS reverse_cost FROM my_edges', %s, %s, FALSE) a 
                        LEFT JOIN my_edges b 
                        ON (a.edge = b.id)""" # (ALPHA, ALPHA, ori_int, des_int)
-                       # ALPHA = 2/5
+
 balance_sql_query_obs = """SELECT ST_AsText(ST_StartPoint(b.geom)), ST_AsText(ST_EndPoint(b.geom)), b.angle_deg, b.key, b.obstructed
                        FROM pgr_dijkstra('SELECT id, source, target, (cost * (1 + %s * abs(angle_deg)/15)) AS cost, (cost * (1 + %s * abs(angle_deg)/15)) AS reverse_cost FROM my_edges WHERE obstructed=0', %s, %s, FALSE) a 
                        LEFT JOIN my_edges b 
                        ON (a.edge = b.id)""" # (ALPHA, ALPHA, ori_int, des_int)
+
 slope_sql_query = """SELECT st_astext(st_startpoint(b.geom)), st_astext(st_endpoint(b.geom)), b.angle_deg, b.key, b.obstructed
                            FROM pgr_dijkstra('SELECT id, source, target, cost, cost AS reverse_cost
                                               FROM my_edges 
                                               WHERE angle_deg < %s AND angle_deg > -(%s)', %s, %s, FALSE) a 
                            LEFT JOIN my_edges b 
                            ON (a.edge = b.id)""" # (i, i, ori_int, des_int))
+
 slope_sql_query_obs = """SELECT st_astext(st_startpoint(b.geom)), st_astext(st_endpoint(b.geom)), b.angle_deg, b.key, b.obstructed
                            FROM pgr_dijkstra('SELECT id, source, target, cost, cost AS reverse_cost
                                               FROM my_edges
@@ -87,10 +98,8 @@ slope_sql_query_obs = """SELECT st_astext(st_startpoint(b.geom)), st_astext(st_e
                            LEFT JOIN my_edges b 
                            ON (a.edge = b.id)""" # (i, i, ori_int, des_int))
 
-
-ALPHA = 2/5
-
 def stream_route(ori_int, des_int, routing, alpha, obs, con):
+    # a good lightweight debug
     print(routing)
     # TODO: this should all be dicts or whatever
     # actually should make the queries functions of obs, c'mon
@@ -165,18 +174,12 @@ def stream_route(ori_int, des_int, routing, alpha, obs, con):
         if row[0] is None:
             continue
 
-        #dedupe
-        # if row in seen_rows:
-        #     continue
-        # else:
-        #     seen_rows.append(row)
-
         row = process_row(row)
         last_row = relinked[-1]
         # flip to be aligned
         if last_row[0][-1] == row[0][1]:
             row = flip_dir(row)
-        # counter = counter+1
+
         # concatenate
         if (row[1], row[2], row[3]) == (last_row[1], last_row[2], last_row[3]):
             last_row = relinked.pop() # remove last_row
@@ -210,7 +213,6 @@ def get_route(ori_str, des_str,routing, alpha, obs, con):
     return route_message
 
 def make_line(row):
-    # print(row)
     points, angle_deg, key, obstruct = row
     if abs(angle_deg) < 4:
         angleclass=0
@@ -229,7 +231,7 @@ def make_line(row):
     elif obstruct == 1:
         color = 'red'
     else:
-        color = angle_color_map[angleclass]
+        color = ANGLE_COLOR_MAP[angleclass]
     return dl.Polyline(positions=points, color=color, weight= 4)
 
 def make_lines(route):
