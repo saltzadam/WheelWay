@@ -25,6 +25,9 @@ COLORBAR = dlx.categorical_colorbar(
         )
 
 
+with open('data/brighton/brighton_addresses', 'r') as addr_file:
+    ADDRESS_LIST = [html.Option(value=addr) for addr in addr_file]
+
 ## start the app
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP, ])
 server = app.server
@@ -49,8 +52,8 @@ app.layout = html.Div([
         html.Div([
             dcc.Markdown("#### Enter any street address in Brighton -- no need to add the city or state!"),
             dbc.Row([
+                html.Datalist(id='addresses',children=ADDRESS_LIST),
                 dbc.Col([
-                    html.Datalist(id='addresses',children=[html.Option(value = '34 Claymoss Road'), html.Option('371 Washington St')]),
                     dbc.Input(id='origin',
                               placeholder="Type your origin here", value='', type='text',
                               debounce=True, bs_size="lg",
@@ -66,7 +69,8 @@ app.layout = html.Div([
                 dbc.Col([
                     html.Div([
                         dbc.Input(id='dest', placeholder="Type your destination here",
-                                  value='', type='text', debounce=True, bs_size="lg")
+                                  value='', type='text', debounce=True, bs_size="lg",
+                                  list = 'addresses')
                     ], style=PADDED_TEXT)
                 ], width=6)
             ]),
