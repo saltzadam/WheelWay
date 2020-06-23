@@ -8,6 +8,9 @@ import dash_leaflet as dl
 
 import os
 
+## Defines colors for lines based on angle classes
+# the None key is basically there for debugging
+# TODO: remove it and check that nothing breaks
 ANGLE_COLOR_MAP = {
         0: "#8dd544ff",
         1: "#35b479ff",
@@ -105,6 +108,8 @@ def stream_route(ori_int, des_int, routing, alpha, obs, con):
     print(routing)
     # TODO: this should all be dicts or whatever
     # actually should make the queries functions of obs, c'mon
+
+    # set the cursor to make the query
     if routing == 'short' and obs:
         cur = con.cursor('short')
         cur.execute(short_sql_query_obs, (ori_int, des_int))
@@ -119,8 +124,14 @@ def stream_route(ori_int, des_int, routing, alpha, obs, con):
         cur.execute(balance_sql_query, (alpha, alpha, ori_int, des_int))
     elif routing == 'slope' and not obs:
         for i in range(0, 39, 2):
+            # originally used named cursors above so that the requests could be returned at streams
+            # i.e. to stop memory errors
+            # But each named cursor can execute only once. So it was hard to write 
+            # a loop like this. TODO: rewrite the iterative part in SQL so that it's
+            # still only one request
+            # TODO: evaluate if we actually need the named cursors. (Or maybe that's
+            #       best practice anyway??)
             cur = con.cursor()
-            
             cur.execute(slope_sql_query, (i, i, ori_int, des_int))
             if i >= 38:
                 return [], "I'm sorry, we can't find a route without very high slopes."
@@ -157,6 +168,13 @@ def stream_route(ori_int, des_int, routing, alpha, obs, con):
     def flip_dir(row):
         return ([row[0][1], row[0][0]], row[1], row[2], row[3])
 
+    # For whatever reason the query is often returned with edges not properly 'aligned'
+    # i.e. you should have (a,b) then (b,c) then (c,d) where each tuple is a line represented
+    # by its endpoints. But sometimes we get (b,a) (b,c) (d,c). (Could be 'directed' toggle
+    # in the queries)
+    # The first row can be 'misaligned' and the only way to tell is by adding the second row as well,
+    # then correcting:
+
     if first_row[0][1] == second_row[0][0]:
         relinked = [first_row, second_row]
     elif first_row[0][0] == second_row[0][0]:
@@ -169,27 +187,32 @@ def stream_route(ori_int, des_int, routing, alpha, obs, con):
         print(first_row)
         print(second_row)
  
-    counter = 0
     seen_rows = [first_row, second_row]
     for row in cur:
-        # print(counter)
-        #last row:
+        # last row is (None, None, None) or somesuch:
         if row[0] is None:
             continue
 
+        # get new row
         row = process_row(row)
+        # check out the most recently added row
         last_row = relinked[-1]
         # flip to be aligned
         if last_row[0][-1] == row[0][1]:
             row = flip_dir(row)
 
-        # concatenate
+        # if the new row and the most recent row are the same color,
+        # we want them to end up together in a PolyLine rather than as
+        # two separate lines.
+        # So check if they are the same color, then add the new coordinate (there's only
+        # one!) to the old line.
         if (row[1], row[2], row[3]) == (last_row[1], last_row[2], last_row[3]):
             last_row = relinked.pop() # remove last_row
             last_row[0].append(row[0][1]) # add in new coordinates
             relinked.append(last_row) # reattach last_row
         else:
             relinked.append(row)
+
     if routing == 'slope':
         cur.close()
         return relinked, "This route has a maximum slope of " + str(max_slope) + " degrees."
@@ -210,9 +233,8 @@ def get_route(ori_str, des_str,routing, alpha, obs, con):
     n1 = get_nearest_node(p1[0], p1[1], cur)
     n2 = get_nearest_node(p2[0], p2[1], cur)
     cur.close()
-    # this returns a list (lng, lat, class)
+
     route_message = stream_route(n1, n2, routing, alpha, obs, con)
-    # returns a list of tuples [(lng, lat)]
     return route_message
 
 def make_line(row):
@@ -228,7 +250,9 @@ def make_line(row):
     else:
         angleclass=4
     points = [[point[1], point[0]] for point in points]
-    # print(points)
+
+    # 'key == 1' precisely if the segment is a crosswalk
+    # note that crosswalks are never obstructed (for now!)
     if key == 1:
         color = 'yellow'
     elif obstruct == 1:
@@ -244,6 +268,9 @@ def make_lines(route):
     for row in route:
         last_line = lines[-1]
         new_line = make_line(row)
+        # TODO: is this redundant with the new stream_route??
+        #       in other words: with stream_route as it is,
+        #       will this condition ever hold?
         if (last_line.color == new_line.color):
             last_line = lines.pop()
             last_line.positions.extend(new_line.positions[0:])
@@ -274,9 +301,11 @@ def get_bounds(lines):
     topright = [max(xs), max(ys)]
     return [botleft, topright]
 
+# decent map bounds to show Brighton
 STANDARD_BOUNDS = [[42.331, -71.17], [42.36, -71.13405]]
 
 def get_fig(ori_str, des_str, routing, alpha, obs):
+    # connect to the database
     con = psycopg2.connect(database = "wheelway", 
                        user=username, 
                        host=hostname, 
@@ -284,10 +313,14 @@ def get_fig(ori_str, des_str, routing, alpha, obs):
                        port=5432
                       )
 
+    # get the route
     route, message = get_route(ori_str, des_str, routing, alpha, obs, con)
-    print(route)
+
+    # point here is to keep the bounds as they are.  "STANDARD_BOUNDS are the 
+    # bounds for the empty route."
     if route is None or route == []:
-        return message, [], STANDARD_BOUNDS # should be some standard bounds maybe
+        return message, [], STANDARD_BOUNDS 
+    # draw the lines with colors and so on
     lines = make_lines(route)
     con.commit()
     con.close

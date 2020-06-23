@@ -1,3 +1,7 @@
+## Various geometric functions
+# includes most of the work for crosswalks
+# TODO: move more stuff here
+
 import math
 def linestring_start(linestring):
     (l1,l2) = list(linestring.coords)[0]

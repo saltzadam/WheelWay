@@ -7,24 +7,15 @@ import dash_leaflet as dl
 from dash_leaflet import express as dlx
 
 import dash_bootstrap_components as dbc
-#import app.utils as utils
 try:
     import app.utils as utils
 except:
     import utils
 
-#import plotly_express as px
 
-ANGLE_COLOR_MAP = utils.ANGLE_COLOR_MAP #{
-#         0: "#8dd544ff",
-#         1: "#35b479ff",
-#         2: "#218f8dff",
-#         3: "#33638dff",
-#         4: "#45337dff",
-#         None: 'blue'
-#         }
+ANGLE_COLOR_MAP = utils.ANGLE_COLOR_MAP 
 
-
+## Define the legend
 MARKS = ["0&deg - 4&deg", "4&deg - 8&deg", "8&deg - 12&deg", "12&deg - 16&deg", "16&deg+", "Crosswalk", "Blocked"]
 COLORSCALE = list(ANGLE_COLOR_MAP.values())[0:5] + ['yellow', 'red']
 COLORBAR = dlx.categorical_colorbar(
@@ -33,17 +24,18 @@ COLORBAR = dlx.categorical_colorbar(
         style={'font-size':'12pt', 'background-color':'lightgrey'}
         )
 
-# COLORBAR2 = dlx.categorical_colorbar(
-#         categories=[ "Crosswalk", "Blocked"],
-#         colorscale=['yellow', 'red'],
-#         width = 150, height = 30, position="bottomright",
-#         style={'font-size':'12pt', 'background-color':'lightgrey'}
-#         )
 
+## start the app
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
-
 server = app.server
+
 # TODO: style constants!
+## some styles
+PADDED_TEXT = {'padding-top':'5px', 'padding-bottom':'5px'}
+SLIDER_LABELS = {'font-size':'12pt', 'color':'black'}
+INVISIBLE = {'display':'none'}
+
+# TODO: find out if people get mad about this parens style
 
 app.layout = html.Div([
     dbc.Col(
@@ -59,21 +51,21 @@ app.layout = html.Div([
                 dbc.Col([
                     dbc.Input(id='origin', 
                         placeholder="Type your origin here", value='', type='text', 
-                        debounce=True, bs_size="lg")], width=6)
+                        debounce=True, bs_size="lg")], width=6), 
+                dbc.Col([
+                    html.Div([
+                        dbc.Button(children = "Find me a route with no obstructions", 
+                            color="success", id='obs_button', n_clicks=0)], 
+                        style=PADDED_TEXT)
+                ])
             ]),
             dbc.Row([
                 dbc.Col([
                     html.Div([
                         dbc.Input(id='dest', placeholder="Type your destination here", 
                             value='', type='text', debounce=True, bs_size="lg")
-                    ], style={'padding-top':'5px', 'padding-bottom':'5px'})
-                ]), 
-                dbc.Col([
-                    html.Div([
-                        dbc.Button(children = "Find me a route with no obstructions", 
-                            color="success", id='obs_button', n_clicks=0)], 
-                        style={'padding-top':'5px'})
-                ])
+                    ], style=PADDED_TEXT)
+                ], width=6)
             ]),
         ]), width='auto', align='start'),
     dbc.Col([
@@ -88,19 +80,19 @@ app.layout = html.Div([
                                              {"label": "Shortest length", 'value': 'short'}
                                            ], style={'width': '800px'}),
                          ], style={'padding_top':'5px', 'padding-bottom':'5px', 'font-size':'16pt'})
-            ]),
+            ], width=6),
             dbc.Col(
                 html.Div([
                     dcc.Slider(id='alpha', min = .4, max = 20.4, step = 1, value=.4,
                         marks={
                             .4: {'label': "I don't mind some hills", 
-                                'style': {'font-size':'12pt', 'color':'blue'}}, 
-                            20.4: {'label': "I hate hills!", 'style': {'font-size':'12pt', 'color':'red'}}
+                                'style': SLIDER_LABELS}, 
+                            20.4: {'label': "I hate hills!", 'style': SLIDER_LABELS}
                         }
                     )
-                ], style={'display':'none'}, id='slider-display'), 
+                ], style=INVISIBLE, id='slider-display'), 
             width=4)
-        ])
+        ], justify='start')
     ]),
     dbc.Col([
         html.Div(id='warning'),
@@ -111,14 +103,14 @@ app.layout = html.Div([
                           zoomControl=False, id="the_map"
                   )
         ]),
-        html.Div(id='blurs', style={'display': 'none'}),
-        html.Div(id='dd-output-container', style={'display': 'none'}),
+        html.Div(id='blurs', style=INVISIBLE),
+        html.Div(id='dd-output-container', style=INVISIBLE),
         html.Div([
                 dbc.Row([
                     dbc.Col(
                         html.Div(
                             dbc.Nav([dbc.NavLink("github", href="www.github.com/saltzadam/WheelWay"),
-                                     dbc.NavLink("slides", href="#")
+                                     dbc.NavLink("slides", href="https://docs.google.com/presentation/d/19f61V7LoHI-ZXnIFEBYhvRCBrFPMcy5li7T9MQJW-nM/edit?usp=sharing")
                             ])
                         ), 
                     width=4),
@@ -128,6 +120,8 @@ app.layout = html.Div([
     ])
 ])
 
+
+## Controls the color of the "Route around obstructions" button
 @app.callback(
         [Output('obs_button', 'color'),
          Output('obs_button',  'children')],
@@ -139,6 +133,8 @@ def update_color(n):
     else:
         return 'warning', "Click to ignore sidewalk problems" 
 
+
+## Signals when all the input fields are full (or at least visited?) and a routing option has been picked
 @app.callback(
         Output('blurs', 'children'),
         [Input('origin', 'n_blur'),
@@ -157,6 +153,8 @@ def update_blurs(blur_o, blur_d, routing):
     else:
         return int(blur_o) + int(blur_d) + c
 
+## Stores routing value
+# TODO: pretty sure this is an artifact of another change and should be removed.
 @app.callback(
         Output('dd-output-container', 'children'),
         [Input('routing','value')])
@@ -164,6 +162,7 @@ def update_blurs(blur_o, blur_d, routing):
 def update_dd(routing):
     return(routing)
 
+## Displays slider only when 'balance' route finding
 @app.callback(
         Output('slider-display', 'style'),
         [Input('dd-output-container', 'children')])
@@ -172,8 +171,9 @@ def show_slider(routing):
     if routing == 'balance':
         return {}
     else:
-        return {'display':'none'}
+        return INVISIBLE
 
+## Fetches the route
 @app.callback(
     [ Output('warning', 'children'),
       Output('layer', 'children'),
@@ -192,6 +192,7 @@ def update_figure(nb, alpha, routing, obs_n, ori_str, dest_str):
     else:
         return utils.get_fig(ori_str, dest_str, routing, alpha, obs)
 
+# How important is it
 if __name__ == '__main__':
-    app.run_server(debug=True,
+    app.run_server(debug=False,
             port = 8050)

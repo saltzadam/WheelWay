@@ -7,7 +7,10 @@ import util
 import geometry
 
 import math
+
+
 from shapely.geometry import Polygon
+# this defines Brighton
 poly = Polygon([
     ( -71.13517512630062 , 42.34601426133963),
     ( -71.13527926858346 , 42.34594945862635),
@@ -1557,49 +1560,27 @@ lngs = np.arange( dataset.bounds.top, dataset.bounds.bottom, -(dataset.bounds.to
 interp_elev = interpolate.interp2d(lats, lngs, band1, kind='cubic', bounds_error=True)
 # interp_elev = interpolate.interp2d(lats, lngs, band1, kind='linear')
 
-# kx, ky = 5 is quintic interpolation
-# s is smoothing factor. general advice is to keep it between s - sqrt(2s) and s + sqrt(2s) so...
-# the format here is (x[i], y[i], z[i])
-#spline_points = [(y,x,band1[i,j]) for i, x in enumerate(lats) for j, y in enumerate(lngs)]
-#print("(lat,lng,height)", spline_points[0])
-#xs = [pts[0] for pts in spline_points]
-#ys = [pts[1] for pts in spline_points]
-#zs = [pts[2] for pts in spline_points]
-##spline_elev = interpolate.bisplrep(xs, ys, zs, kx=5, ky=5, s = len(lats))
-#spline_elev = interpolate.SmoothBivariateSpline(xs, ys, zs, kx=5, ky=5)
-#print("loaded")
 
-# del(xs)
-# del(ys) 
-# del(zs)
-# del(spline_points)
-
-
-
-
+# evaluates the interpolating function
 def get_elev(lat, lon):
     return interp_elev(lat,lon)[0]
 
+# gets the midpoint of a LineString
+# returns a tuple, not a Point
 def get_midpoint(linestring):
     p0, p1 = linestring.coords[:]
     m0 = (p0[0] + p1[0])/2
     m1 = (p0[1] + p1[1])/2
     return (m0, m1)
 
-
+# The "trigonometric" definition of slope
+# WARNING: does not check that run != 0
 def get_slope(row):
     rise = row['elevation_1'] - row['elevation_0']
     run = row['length_m']
     return rise/run
-# def get_slope(row):
-#     print(row)
-#     lat, lon = get_midpoint(row['geometry'])
-#     f_x = interp_elev(lat, lon, dx = 1, dy = 0)
-#     f_y = interp_elev(lat, lon, dx = 0, dy = 1)
-#     gradient_norm = math.sqrt(f_x ** 2 + f_y ** 2)
-#     return 100*gradient_norm
 
-
+# TODO: reconcile this with the app! these are not the classes used there
 def get_angle_class(angle):
     angle = abs(angle)
     if angle < 1:
@@ -1614,6 +1595,10 @@ def get_angle_class(angle):
         return 4
 
 from math import atan, pi
+
+# This is the old interpolation
+# it may actually give the same result
+# TODO: resolve this
 def add_angle(gdf):
     assert gdf.crs == "EPSG:4326"
     gdf['elevation_0'] =gdf.geometry.map(lambda x : get_elev(x.coords[0][0], x.coords[0][1]))
@@ -1643,6 +1628,8 @@ values = np.fromiter((band1[dataset.index(c[0], c[1])] for c in coords), dtype=f
 actual_actual_lats = [coord[0] for  coord in coords]
 actual_actual_lngs = [coord[1] for  coord in coords]
 
+## The new interpolation:
+
 import shapely 
 def revise_angles(gdf):
     assert gdf.crs == "EPSG:4326"
@@ -1653,8 +1640,6 @@ def revise_angles(gdf):
 
     gdf['elevation_0'] = interpolate.griddata(np.array([actual_actual_lats, actual_actual_lngs]).T, values, (gdf_0x, gdf_0y), method='cubic')    
     gdf['elevation_1'] = interpolate.griddata(np.array([actual_actual_lats, actual_actual_lngs]).T, values, (gdf_1x, gdf_1y), method='cubic')    
-    # gdf['elevation_0'] =gdf.geometry.map(lambda x : get_elev(x.coords[0][0], x.coords[0][1]))
-    # gdf['elevation_1'] =gdf.geometry.map(lambda x : get_elev(x.coords[1][0], x.coords[1][1]))
     gdf['slope'] = gdf.apply(get_slope, axis=1)
     gdf['angle_deg'] = gdf['slope'].map(lambda x : atan(x) * 360 / (2 * pi))
     gdf.drop(inplace=True, columns=['slope'])
