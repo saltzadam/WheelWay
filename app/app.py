@@ -13,14 +13,14 @@ except:
     import utils
 
 
-ANGLE_COLOR_MAP = utils.ANGLE_COLOR_MAP 
+ANGLE_COLOR_MAP = utils.ANGLE_COLOR_MAP
 
 ## Define the legend
 MARKS = ["0&deg - 4&deg", "4&deg - 8&deg", "8&deg - 12&deg", "12&deg - 16&deg", "16&deg+", "Crosswalk", "Blocked"]
 COLORSCALE = list(ANGLE_COLOR_MAP.values())[0:5] + ['yellow', 'red']
 COLORBAR = dlx.categorical_colorbar(
-        categories=MARKS, colorscale=COLORSCALE, 
-        width=520, height=30, position="bottomleft", 
+        categories=MARKS, colorscale=COLORSCALE,
+        width=520, height=30, position="bottomleft",
         style={'font-size':'12pt', 'background-color':'lightgrey'}
         )
 
@@ -43,27 +43,28 @@ app.layout = html.Div([
         # WheelWay
         ### Directions for everybody
         """
-    )),
+        )
+    ),
     dbc.Col(
         html.Div([
             dcc.Markdown("Enter any street address in Brighton -- no need to add the city or state!"),
             dbc.Row([
                 dbc.Col([
-                    dbc.Input(id='origin', 
-                        placeholder="Type your origin here", value='', type='text', 
-                        debounce=True, bs_size="lg")], width=6), 
+                    dbc.Input(id='origin',
+                              placeholder="Type your origin here", value='', type='text',
+                              debounce=True, bs_size="lg")], width=6),
                 dbc.Col([
                     html.Div([
-                        dbc.Button(children = "Find me a route with no obstructions", 
-                            color="success", id='obs_button', n_clicks=0)], 
-                        style=PADDED_TEXT)
+                        dbc.Button(children="Find me a route with no obstructions",
+                                   color="success", id='obs_button', n_clicks=0)],
+                             style=PADDED_TEXT)
                 ])
             ]),
             dbc.Row([
                 dbc.Col([
                     html.Div([
-                        dbc.Input(id='dest', placeholder="Type your destination here", 
-                            value='', type='text', debounce=True, bs_size="lg")
+                        dbc.Input(id='dest', placeholder="Type your destination here",
+                                  value='', type='text', debounce=True, bs_size="lg")
                     ], style=PADDED_TEXT)
                 ], width=6)
             ]),
@@ -72,50 +73,50 @@ app.layout = html.Div([
         dbc.Row([
             dbc.Col([
                 html.Div([
-                    dcc.Dropdown(id="routing", 
-                                 placeholder="Find the route with...", 
-                                 options = [
-                                             {"label": "Lowest slope", "value": 'slope'},
-                                             {"label": "Balanced slope and length", "value":'balance'},
-                                             {"label": "Shortest length", 'value': 'short'}
-                                           ], style={'width': '800px'}),
+                    dcc.Dropdown(id="routing",
+                                 placeholder="Find the route with...",
+                                 options=[
+                                     {"label": "Lowest slope", "value": 'slope'},
+                                     {"label": "Balanced slope and length", "value":'balance'},
+                                     {"label": "Shortest length", 'value': 'short'}
+                                 ], style={'width': '800px'}),
                          ], style={'padding_top':'5px', 'padding-bottom':'5px', 'font-size':'16pt'})
             ], width=6),
             dbc.Col(
                 html.Div([
-                    dcc.Slider(id='alpha', min = .4, max = 20.4, step = 1, value=.4,
-                        marks={
-                            .4: {'label': "I don't mind some hills", 
-                                'style': SLIDER_LABELS}, 
-                            20.4: {'label': "I hate hills!", 'style': SLIDER_LABELS}
+                    dcc.Slider(id='alpha', min=.4, max=20.4, step=1, value=.4,
+                               marks={
+                                   .4: {'label': "I don't mind some hills",
+                                        'style': SLIDER_LABELS},
+                                   20.4: {'label': "I hate hills!", 'style': SLIDER_LABELS}
                         }
                     )
                 ], style=INVISIBLE, id='slider-display'), 
-            width=4)
+                width=4)
         ], justify='start')
     ]),
     dbc.Col([
         html.Div(id='warning'),
         html.Div(id='a_string', children=""),
-        html.Div([dl.Map([dl.TileLayer(), 
-                          dl.LayerGroup(id='layer'), COLORBAR], 
-                          style={'width': '1000px', 'height': '500px'}, 
-                          zoomControl=False, id="the_map"
+        html.Div([dl.Map([dl.TileLayer(),
+                          dl.LayerGroup(id='layer'), COLORBAR],
+                         style={'width': '1000px', 'height': '500px'},
+                         zoomControl=False, id="the_map"
                   )
         ]),
         html.Div(id='blurs', style=INVISIBLE),
         html.Div(id='dd-output-container', style=INVISIBLE),
         html.Div([
-                dbc.Row([
-                    dbc.Col(
-                        html.Div(
-                            dbc.Nav([dbc.NavLink("github", href="www.github.com/saltzadam/WheelWay"),
-                                     dbc.NavLink("slides", href="https://docs.google.com/presentation/d/19f61V7LoHI-ZXnIFEBYhvRCBrFPMcy5li7T9MQJW-nM/edit?usp=sharing")
-                            ])
-                        ), 
+            dbc.Row([
+                dbc.Col(
+                    html.Div(
+                        dbc.Nav([dbc.NavLink("github", href="www.github.com/saltzadam/WheelWay"),
+                                 dbc.NavLink("slides", href="https://docs.google.com/presentation/d/19f61V7LoHI-ZXnIFEBYhvRCBrFPMcy5li7T9MQJW-nM/edit?usp=sharing")
+                        ])
+                    ),
                     width=4),
-                    dbc.Col(html.Div(),width=4)
-                ], justify="between")
+                dbc.Col(html.Div(), width=4)
+            ], justify="between")
         ])
     ])
 ])
@@ -124,14 +125,14 @@ app.layout = html.Div([
 ## Controls the color of the "Route around obstructions" button
 @app.callback(
         [Output('obs_button', 'color'),
-         Output('obs_button',  'children')],
+         Output('obs_button', 'children')],
         [Input('obs_button', 'n_clicks')])
 
 def update_color(n):
     if n % 2 == 0:
         return 'success', "Click to route around sidewalk problems"
     else:
-        return 'warning', "Click to ignore sidewalk problems" 
+        return 'warning', "Click to ignore sidewalk problems"
 
 
 ## Signals when all the input fields are full (or at least visited?) and a routing option has been picked
@@ -147,7 +148,7 @@ def update_blurs(blur_o, blur_d, routing):
     elif routing == 'balance':
         c = 1
     else:
-        c = 2 
+        c = 2
     if (not blur_o) or (not blur_d):
         return 0
     else:
@@ -157,10 +158,10 @@ def update_blurs(blur_o, blur_d, routing):
 # TODO: pretty sure this is an artifact of another change and should be removed.
 @app.callback(
         Output('dd-output-container', 'children'),
-        [Input('routing','value')])
+        [Input('routing', 'value')])
 
 def update_dd(routing):
-    return(routing)
+    return routing
 
 ## Displays slider only when 'balance' route finding
 @app.callback(
@@ -175,9 +176,9 @@ def show_slider(routing):
 
 ## Fetches the route
 @app.callback(
-    [ Output('warning', 'children'),
-      Output('layer', 'children'),
-      Output('the_map','bounds')],
+    [Output('warning', 'children'),
+     Output('layer', 'children'),
+     Output('the_map', 'bounds')],
     [Input('blurs', 'children'),
      Input('alpha', 'value'),
      Input('routing', 'value'),
@@ -187,12 +188,12 @@ def show_slider(routing):
 
 def update_figure(nb, alpha, routing, obs_n, ori_str, dest_str):
     obs = (obs_n % 2 == 1)
-    if (not ori_str) or (not dest_str) or (routing not in ['slope','balance','short']):
-        return [], 'Enter your origin and destination!', utils.STANDARD_BOUNDS 
+    if (not ori_str) or (not dest_str) or (routing not in ['slope', 'balance', 'short']):
+        return [], 'Enter your origin and destination!', utils.STANDARD_BOUNDS
     else:
         return utils.get_fig(ori_str, dest_str, routing, alpha, obs)
 
 # How important is it
 if __name__ == '__main__':
     app.run_server(debug=False,
-            port = 8050)
+                   port=8050)

@@ -1,5 +1,7 @@
+from copy import deepcopy
+
 import shapely
-import networkx as nx
+from shapely.geometry import Point
 import osmnx as ox
 import geopandas as gpd
 
@@ -17,7 +19,7 @@ def ls_to_mls(linestring):
     linelist = linestring.coords
     pairlist = list(zip(linelist, linelist[1:]))
     return shapely.geometry.MultiLineString(pairlist)
-    
+
 CRS_GLOBAL = "EPSG:4326"
 # A GeoDataFrame is "global" if it's in EPSG:4326, i.e. lat/long
 # Otherwise it's "local"
@@ -33,15 +35,14 @@ def is_local(gdf):
         raise ValueError("This GeoDataFrame has no crs.")
     return gdf.crs != CRS_GLOBAL
 
-from shapely.geometry import Point
+#TODO: good recc from pylint, use set comprehension (and generally improve)
 def edge_gdf_to_graph(gdf):
     edge_points = gpd.GeoDataFrame(list(map(Point, (list(set(
-                [point for ls in list(gdf.geometry.map(lambda x : list(x.coords)).values) for point in ls]
+                [point for ls in list(gdf.geometry.map(lambda x: list(x.coords)).values) for point in ls]
             ))))))
     edge_points.geometry = edge_points[0]
     return ox.utils_graph.graph_from_gdfs(edge_points, gdf)
 
-from copy import deepcopy
 
 def list_explode(gdf):
     rows = []

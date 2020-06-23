@@ -1,3 +1,5 @@
+import os
+
 import geocoder
 import psycopg2
 import sqlalchemy as sql
@@ -6,7 +8,6 @@ from  shapely.wkt import loads
 import shapely
 import dash_leaflet as dl
 
-import os
 
 ## Defines colors for lines based on angle classes
 # the None key is basically there for debugging
@@ -21,8 +22,8 @@ ANGLE_COLOR_MAP = {
 
 
 # you should fill in your own database here
-hostname = "wheelway4.cgfv5tiyps6x.us-east-1.rds.amazonaws.com"
-username = "postgres"
+HOSTNAME = "wheelway4.cgfv5tiyps6x.us-east-1.rds.amazonaws.com"
+USERNAME = "postgres"
 
 # Import your password
 # This is for the user 'postgres' in your database, not for AWS
@@ -307,8 +308,8 @@ STANDARD_BOUNDS = [[42.331, -71.17], [42.36, -71.13405]]
 def get_fig(ori_str, des_str, routing, alpha, obs):
     # connect to the database
     con = psycopg2.connect(database = "wheelway", 
-                       user=username, 
-                       host=hostname, 
+                       user=USERNAME, 
+                       host=HOSTNAME, 
                        password=rds_key, 
                        port=5432
                       )
