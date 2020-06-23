@@ -26,7 +26,7 @@ COLORBAR = dlx.categorical_colorbar(
 
 
 ## start the app
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP, ])
 server = app.server
 
 # TODO: style constants!
@@ -47,12 +47,14 @@ app.layout = html.Div([
     ),
     dbc.Col(
         html.Div([
-            dcc.Markdown("Enter any street address in Brighton -- no need to add the city or state!"),
+            dcc.Markdown("#### Enter any street address in Brighton -- no need to add the city or state!"),
             dbc.Row([
                 dbc.Col([
+                    html.Datalist(id='addresses',children=[html.Option(value = '34 Claymoss Road'), html.Option('371 Washington St')]),
                     dbc.Input(id='origin',
                               placeholder="Type your origin here", value='', type='text',
-                              debounce=True, bs_size="lg")], width=6),
+                              debounce=True, bs_size="lg",
+                              list = 'addresses')], width=6),
                 dbc.Col([
                     html.Div([
                         dbc.Button(children="Find me a route with no obstructions",
@@ -96,14 +98,13 @@ app.layout = html.Div([
         ], justify='start')
     ]),
     dbc.Col([
-        html.Div(id='warning'),
-        html.Div(id='a_string', children=""),
+        dcc.Loading(id='loading-1', children=[html.Div(id='warning', children=[html.P(children="\u00A0", id='warning-p')], style={'height':'24pt'})], type="dot", style={'position':'fixed','left':'10px'}),
         html.Div([dl.Map([dl.TileLayer(),
                           dl.LayerGroup(id='layer'), COLORBAR],
                          style={'width': '1000px', 'height': '500px'},
                          zoomControl=False, id="the_map"
                   )
-        ]),
+        ], id='map_div'),
         html.Div(id='blurs', style=INVISIBLE),
         html.Div(id='dd-output-container', style=INVISIBLE),
         html.Div([
@@ -121,7 +122,16 @@ app.layout = html.Div([
     ])
 ])
 
-
+def update_working(loading_state):
+    print(loading_state)
+    try:
+        is_loading = loading_state['is_loading']
+        if is_loading:
+            return 'Working...'
+        else:
+            return []
+    except TypeError:
+        return []
 ## Controls the color of the "Route around obstructions" button
 @app.callback(
         [Output('obs_button', 'color'),
@@ -176,7 +186,7 @@ def show_slider(routing):
 
 ## Fetches the route
 @app.callback(
-    [Output('warning', 'children'),
+    [Output('warning-p', 'children'),
      Output('layer', 'children'),
      Output('the_map', 'bounds')],
     [Input('blurs', 'children'),
@@ -189,7 +199,7 @@ def show_slider(routing):
 def update_figure(nb, alpha, routing, obs_n, ori_str, dest_str):
     obs = (obs_n % 2 == 1)
     if (not ori_str) or (not dest_str) or (routing not in ['slope', 'balance', 'short']):
-        return [], 'Enter your origin and destination!', utils.STANDARD_BOUNDS
+        return '\u00A0', [], utils.STANDARD_BOUNDS
     else:
         return utils.get_fig(ori_str, dest_str, routing, alpha, obs)
 

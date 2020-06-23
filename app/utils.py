@@ -52,7 +52,6 @@ def get_nearest_node(lng, lat, cur):
 # converts 'POINT (coord, coord)' to (coord, coord)
 def pt_to_pair(ptstring):
 
-    print(ptstring)
     pt = loads(ptstring) # From shapely. Takes a WKT string
                          # and returns a shapely.geometry.Point.
     return pt.coords[0]  # We only want (coord, coord)
