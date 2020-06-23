@@ -25,7 +25,7 @@ COLORBAR = dlx.categorical_colorbar(
         )
 
 
-with open('data/brighton/brighton_addresses', 'r') as addr_file:
+with open('app/brighton_addresses', 'r') as addr_file:
     ADDRESS_LIST = [html.Option(value=addr) for addr in addr_file]
 
 ## start the app
