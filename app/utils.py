@@ -37,6 +37,7 @@ except:
 
 # TODO: error handling!
 def get_nearest_node(lng, lat, cur):
+    """ Find the node on the graph closest to (lng, lat).  cur is a cursor.  No error handling for now."""
     # search the edges, ordered by distance from (lng, lat)
     # LIMIT 1 returns the first, i.e the closest
     cur.execute("""
@@ -51,13 +52,14 @@ def get_nearest_node(lng, lat, cur):
 
 # converts 'POINT (coord, coord)' to (coord, coord)
 def pt_to_pair(ptstring):
-
+    """ Convert 'POINT (coord, coord' to (coord, coord)."""
     pt = loads(ptstring) # From shapely. Takes a WKT string
                          # and returns a shapely.geometry.Point.
     return pt.coords[0]  # We only want (coord, coord)
                          # TODO: clearer as [:]
 
 def process_row(row):
+    """ Put data of a row into a nice tuple."""
     return ([pt_to_pair(row[0]), pt_to_pair(row[1])], row[2], row[3], row[4])
  
 
@@ -104,6 +106,24 @@ slope_sql_query_obs = """SELECT st_astext(st_startpoint(b.geom)), st_astext(st_e
                            ON (a.edge = b.id)""" # (i, i, ori_int, des_int))
 
 def stream_route(ori_int, des_int, routing, alpha, obs, con):
+    """ Get the route from the database.
+
+    This function queries a PostGIS/pgrouting database for the route from ori_int to des_int. The result is streamed back. Each row is processed so that it's easier to build lines in the next step. To avoid memory issues, rows which represent segments of the same color are combined.
+
+    Arguments:
+    ori_int, des_int -- integer labels of nodes in the database. These should be the output of get_nearest_node.
+    routing -- one of 'slope', 'balance', or 'short'
+    alpha -- penalty factor in 'balance'
+    obs -- boolean answer to "should the route avoid obstructed sidewalks?"
+    con -- a psycopg2 connection to a database
+
+    Returns:
+    route -- a list of tuples ([(source, target)], angle, obstructed, crosswalk) which represents the route from ori_int to des_int
+    message -- a string signaling success or failure
+
+    (We need a con because this function might spawn more than one cursor.  This code is a high priority for clean-up.)
+    """
+
     # a good lightweight debug
     print(routing)
     # TODO: this should all be dicts or whatever
@@ -225,6 +245,7 @@ def stream_route(ori_int, des_int, routing, alpha, obs, con):
         return relinked, SUCCESS_STRING
 
 def get_route(ori_str, des_str,routing, alpha, obs, con):
+    """ Geocodes the origin and destination, then returns the route. Main documentation is in the stream_route docstring. """
     g1 = geocoder.osm(ori_str + " Brighton, MA")
     g2 = geocoder.osm(des_str + " Brighton, MA")
     p1 = (g1.json['lng'], g1.json['lat'])
@@ -238,6 +259,7 @@ def get_route(ori_str, des_str,routing, alpha, obs, con):
     return route_message
 
 def make_line(row):
+    """ Draws a line from row, a row returned by stream_route """
     points, angle_deg, key, obstruct = row
     if abs(angle_deg) < 4:
         angleclass=0
@@ -262,6 +284,7 @@ def make_line(row):
     return dl.Polyline(positions=points, color=color, weight= 4)
 
 def make_lines(route):
+    """ Draw many lines by iterating through a route returned by stream_route."""
     first_seg = route.pop(0)
     lines = [make_line(first_seg)]
     # now we have to check the accumulator as we go
@@ -271,6 +294,8 @@ def make_lines(route):
         # TODO: is this redundant with the new stream_route??
         #       in other words: with stream_route as it is,
         #       will this condition ever hold?
+        #       NO, but only because stream_route will never actually
+        #       combine routes!  It's testing on angle, not angle class!
         if (last_line.color == new_line.color):
             last_line = lines.pop()
             last_line.positions.extend(new_line.positions[0:])
@@ -294,6 +319,8 @@ def make_lines(route):
     return lines
 
 def get_bounds(lines):
+    """ Returns coordinates of the bottom-left and top-right corners of a rectangle which bound the route."""
+    #TODO: add a little margin!
     points = [line.positions for line in lines]
     xs = [p[0] for pairs in points for p in pairs]
     ys = [p[1] for pairs in points for p in pairs]
@@ -305,6 +332,22 @@ def get_bounds(lines):
 STANDARD_BOUNDS = [[42.331, -71.17], [42.36, -71.13405]]
 
 def get_fig(ori_str, des_str, routing, alpha, obs):
+    """
+    This is the point of this file.  This function ocnnects to the database, gets a route from ori_str
+    to des_str according to the routing method/alpha/obs, and returns the lines to draw.
+
+    Arguments:
+    ori_str, des_str -- strings of street addresses
+    routing -- one of ['short', 'slope', 'balance']
+    alpha -- penalty factor for 'balance' routing
+    obs -- boolean answer to "Should the route avoid obstructed sidewalks?"
+
+    Returns:
+    message -- a string method to display, e.g. "Success" or "Failure"
+    lines -- the lines to draw on the Map
+    bounds -- bounds for the lines so that the Map can zoom in properly
+
+    """
     # connect to the database
     con = psycopg2.connect(database = "wheelway", 
                        user=USERNAME, 

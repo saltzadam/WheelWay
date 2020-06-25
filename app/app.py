@@ -126,30 +126,18 @@ app.layout = html.Div([
     ])
 ])
 
-def update_working(loading_state):
-    print(loading_state)
-    try:
-        is_loading = loading_state['is_loading']
-        if is_loading:
-            return 'Working...'
-        else:
-            return []
-    except TypeError:
-        return []
-## Controls the color of the "Route around obstructions" button
 @app.callback(
         [Output('obs_button', 'color'),
          Output('obs_button', 'children')],
         [Input('obs_button', 'n_clicks')])
 
 def update_color(n):
+    """Update the color of the 'obstruction' button based on number of clicks."""
     if n % 2 == 0:
         return 'success', "Click to route around sidewalk problems"
     else:
         return 'warning', "Click to ignore sidewalk problems"
 
-
-## Signals when all the input fields are full (or at least visited?) and a routing option has been picked
 @app.callback(
         Output('blurs', 'children'),
         [Input('origin', 'n_blur'),
@@ -157,6 +145,7 @@ def update_color(n):
          Input('routing', 'value')])
 
 def update_blurs(blur_o, blur_d, routing):
+    """Signal when all the input fields are full (or at least visited?) and a routing option has been picked."""
     if routing == 'slope':
         c = 0
     elif routing == 'balance':
@@ -168,13 +157,13 @@ def update_blurs(blur_o, blur_d, routing):
     else:
         return int(blur_o) + int(blur_d) + c
 
-## Stores routing value
-# TODO: pretty sure this is an artifact of another change and should be removed.
 @app.callback(
         Output('dd-output-container', 'children'),
         [Input('routing', 'value')])
 
 def update_dd(routing):
+    """Store the routing value. Pretty sure this is an artifact of another change."""
+    #TODO: check that
     return routing
 
 ## Displays slider only when 'balance' route finding
@@ -183,6 +172,7 @@ def update_dd(routing):
         [Input('dd-output-container', 'children')])
 
 def show_slider(routing):
+    """Show the slider only if 'balance' is the routing mode."""
     if routing == 'balance':
         return {}
     else:
@@ -201,13 +191,21 @@ def show_slider(routing):
      State('dest', 'value')])
 
 def update_figure(nb, alpha, routing, obs_n, ori_str, dest_str):
+    """Fetch the route and update the Map element.
+
+    Arguments:
+    nb -- whether an input field has changed.  Triggers an update
+    alpha -- the penalty factor for slopes in the 'balance' route-finding method.  See utils.
+    routing -- choice of routing option. Should be a string in ['slope', 'balance', 'short'].
+    obs_n -- number of times the obstruction button has been clicked
+    ori_str, dest_str -- strings for the origin and destination
+    """
     obs = (obs_n % 2 == 1)
     if (not ori_str) or (not dest_str) or (routing not in ['slope', 'balance', 'short']):
         return '\u00A0', [], utils.STANDARD_BOUNDS
     else:
         return utils.get_fig(ori_str, dest_str, routing, alpha, obs)
 
-# How important is it
 if __name__ == '__main__':
     app.run_server(debug=False,
                    port=8050)
