@@ -90,7 +90,7 @@ app.layout = html.Div([
             ], width=6),
             dbc.Col(
                 html.Div([
-                    dcc.Slider(id='alpha', min=.4, max=20.4, step=1, value=.4,
+                    dcc.Slider(id='alpha', min=0, max=20, step=1, value=0,
                                marks={
                                    .4: {'label': "I don't mind some hills",
                                         'style': SLIDER_LABELS},
