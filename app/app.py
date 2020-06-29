@@ -92,9 +92,9 @@ app.layout = html.Div([
                 html.Div([
                     dcc.Slider(id='alpha', min=0, max=20, step=1, value=0,
                                marks={
-                                   .4: {'label': "I don't mind some hills",
+                                   0: {'label': "I don't mind some hills",
                                         'style': SLIDER_LABELS},
-                                   20.4: {'label': "I hate hills!", 'style': SLIDER_LABELS}
+                                   20: {'label': "I hate hills!", 'style': SLIDER_LABELS}
                         }
                     )
                 ], style=INVISIBLE, id='slider-display'), 
